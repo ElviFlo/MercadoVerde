@@ -18,22 +18,23 @@ model User {
 }
 
 model Category {
-  id        Int       @id @default(autoincrement())
-  name      String    @unique
-  products  Product[]
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  products Product[]
 }
 
 model Product {
-  id          Int       @id @default(autoincrement())
-  name        String
-  description String?
-  price       Float
-  stock       Int
-  categoryId  Int
-  category    Category  @relation(fields: [categoryId], references: [id])
-  cartItems   CartItem[]
-  orderItems  OrderItem[]
-  createdAt   DateTime  @default(now())
+  id                Int                 @id @default(autoincrement())
+  name              String
+  description       String?
+  price             Float
+  stock             Int
+  categoryId        Int
+  category          Category            @relation(fields: [categoryId], references: [id])
+  cartItems         CartItem[]
+  orderItems        OrderItem[]
+  createdAt         DateTime            @default(now())
+  InventoryMovement InventoryMovement[]
 }
 
 model Cart {
@@ -84,12 +85,12 @@ model InventoryMovement {
 }
 
 model VoiceIntentsLog {
-  id          Int      @id @default(autoincrement())
-  transcript  String
-  language    String
-  confidence  Float
-  activation  String
-  intent      String
-  result      String
-  createdAt   DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  transcript String
+  language   String
+  confidence Float
+  activation String
+  intent     String
+  result     String
+  createdAt  DateTime @default(now())
 }
