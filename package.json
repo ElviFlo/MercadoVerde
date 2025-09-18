@@ -1,0 +1,14 @@
+{
+  "start": "node dist/main.js",
+  "build": "tsc -p tsconfig.build.json",
+  "start:dev": "nest start --watch",
+  "prisma:generate": "prisma generate",
+  "prisma:migrate": "prisma migrate dev --name init",
+  "postinstall": "prisma generate",
+  "dependencies": {
+    "@prisma/client": "^6.16.2"
+  },
+  "devDependencies": {
+    "prisma": "^6.16.2"
+  }
+}
