@@ -1,0 +1,348 @@
+openapi: 3.0.3
+info:
+  title: MercadoVerde API
+  version: 0.1.0
+  description: >
+    Contrato inicial basado en prisma/schema.prisma (Users, Categories, Products, Cart, Orders).
+servers:
+  - url: http://localhost:3000/api/v1
+
+tags:
+  - name: Auth
+  - name: Categories
+  - name: Products
+  - name: Cart
+  - name: Orders
+  - name: Voice
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Iniciar sesión
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthToken' }
+        '401': { description: Credenciales inválidas }
+
+  /categories:
+    get:
+      tags: [Categories]
+      summary: Listar categorías
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Category' }
+    post:
+      tags: [Categories]
+      summary: Crear categoría (admin)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CategoryCreate' }
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+        '409': { description: Nombre duplicado }
+
+  /products:
+    get:
+      tags: [Products]
+      summary: Listar/buscar productos
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+          description: Búsqueda por nombre/descripción
+        - in: query
+          name: categoryId
+          schema: { type: integer }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductPage' }
+    post:
+      tags: [Products]
+      summary: Crear producto (admin/seller)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductCreate' }
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+
+  /products/{id}:
+    get:
+      tags: [Products]
+      summary: Ver producto por id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+        '404': { description: No encontrado }
+
+  /cart:
+    get:
+      tags: [Cart]
+      summary: Ver carrito activo del usuario
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '401': { description: No autorizado }
+
+  /cart/items:
+    post:
+      tags: [Cart]
+      summary: Agregar o actualizar ítem del carrito (upsert)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CartItemUpsert' }
+      responses:
+        '200':
+          description: Carrito actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '400': { description: Datos inválidos }
+        '401': { description: No autorizado }
+        '404': { description: Producto no encontrado }
+        '409': { description: Stock insuficiente (si se valida aquí) }
+    delete:
+      tags: [Cart]
+      summary: Eliminar ítem del carrito
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: productId
+          required: true
+          schema: { type: integer }
+      responses:
+        '204': { description: Eliminado }
+        '401': { description: No autorizado }
+        '404': { description: Ítem no encontrado }
+
+  /orders:
+    get:
+      tags: [Orders]
+      summary: Listar pedidos del usuario
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Order' }
+        '401': { description: No autorizado }
+    post:
+      tags: [Orders]
+      summary: Crear pedido (checkout) desde carrito activo
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '400': { description: Carrito vacío }
+        '409': { description: Stock insuficiente }
+
+  /orders/{id}:
+    get:
+      tags: [Orders]
+      summary: Ver pedido por id
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '401': { description: No autorizado }
+        '403': { description: No pertenece al usuario }
+        '404': { description: No encontrado }
+
+  /voice-intents:
+    post:
+      tags: [Voice]
+      summary: Registrar log de intent de voz
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VoiceIntentsLogCreate' }
+      responses:
+        '201': { description: Creado }
+        '400': { description: Payload inválido }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Auth
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+    AuthToken:
+      type: object
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, example: Bearer }
+        expires_in: { type: integer, example: 3600 }
+
+    # Category
+    Category:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+    CategoryCreate:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+
+    # Product
+    Product:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        price: { type: number, format: float }
+        stock: { type: integer }
+        categoryId: { type: integer }
+        createdAt: { type: string, format: date-time }
+    ProductCreate:
+      type: object
+      required: [name, price, stock, categoryId]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        price: { type: number, format: float }
+        stock: { type: integer }
+        categoryId: { type: integer }
+    ProductPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Product' }
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+
+    # Cart
+    CartItem:
+      type: object
+      properties:
+        id: { type: integer }
+        productId: { type: integer }
+        quantity: { type: integer }
+        price: { type: number, format: float }
+    CartItemUpsert:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId: { type: integer }
+        quantity: { type: integer, minimum: 0 }
+    Cart:
+      type: object
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        active: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CartItem' }
+
+    # Orders
+    OrderItem:
+      type: object
+      properties:
+        id: { type: integer }
+        orderId: { type: integer }
+        productId: { type: integer }
+        quantity: { type: integer }
+        price: { type: number, format: float }
+    Order:
+      type: object
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        status: { type: string, example: PAID }
+        createdAt: { type: string, format: date-time }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/OrderItem' }
+
+    # Voice
+    VoiceIntentsLogCreate:
+      type: object
+      required: [transcript, language, confidence, activation, intent, result]
+      properties:
+        transcript: { type: string }
+        language: { type: string }
+        confidence: { type: number, format: float }
+        activation: { type: string }
+        intent: { type: string }
+        result: { type: string }
