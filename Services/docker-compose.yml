@@ -1,15 +1,4 @@
 services:
-  orders:
-    build:
-      context: ./orders
-    container_name: orders_service
-    ports:
-      - "3002:3002"
-    env_file:
-      - ./orders/.env
-    depends_on:
-      - db
-
   auth:
     build:
       context: ./auth
@@ -18,6 +7,17 @@ services:
       - "3001:3001"
     env_file:
       - ./auth/.env
+    depends_on:
+      - db
+
+  orders:
+    build:
+      context: ./orders
+    container_name: orders_service
+    ports:
+      - "3002:3002"
+    env_file:
+      - ./orders/.env
     depends_on:
       - db
 
@@ -30,4 +30,4 @@ services:
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: microservices
     ports:
-      - "5432:5432"
+      - "5433:5432"

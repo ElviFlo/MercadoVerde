@@ -1,19 +1,14 @@
 # Etapa 1: Construcción
 FROM node:18-alpine AS builder
 
-# Crear directorio de trabajo
 WORKDIR /usr/src/app
 
-# Copiar los archivos de dependencias primero
+# Copiar dependencias y lock file
 COPY package*.json ./
-
-# Instalar dependencias
 RUN npm install
 
-# Copiar el resto del código
+# Copiar el resto del código y compilar
 COPY . .
-
-# Compilar TypeScript a JavaScript (dist/)
 RUN npm run build
 
 
@@ -22,15 +17,13 @@ FROM node:18-alpine
 
 WORKDIR /usr/src/app
 
-# Copiar solo lo necesario desde la etapa builder
+# Copiar package.json + lock y el código compilado
 COPY --from=builder /usr/src/app/package*.json ./
 COPY --from=builder /usr/src/app/dist ./dist
 
-# Instalar dependencias solo de producción
-RUN npm install --only=production
+# Instalar solo dependencias de producción
+RUN npm ci --omit=dev   # más confiable que npm install
 
-# Exponer el puerto del servicio
 EXPOSE 3001
 
-# Comando para iniciar la app
 CMD ["node", "dist/main.js"]
