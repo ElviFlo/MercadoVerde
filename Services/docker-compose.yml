@@ -20,6 +20,17 @@ services:
       - ./orders/.env
     depends_on:
       - db
+  
+  products:
+    build:
+      context: ./products
+    container_name: products_service
+    ports:
+      - "3003:3003"
+    env_file:
+      - ./products/.env
+    depends_on:
+      - db
 
   db:
     image: postgres:15
