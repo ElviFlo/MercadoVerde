@@ -1,10 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const AuthController_1 = require("../controllers/AuthController");
+const auth_controller_1 = require("../controllers/auth.controller");
 const router = (0, express_1.Router)();
-router.post("/register", AuthController_1.AuthController.register);
-router.post("/login", AuthController_1.AuthController.login);
-router.post("/validate", AuthController_1.AuthController.validate);
+router.post("/register", auth_controller_1.AuthController.register);
+router.post("/login", auth_controller_1.AuthController.login);
+router.post("/validate", auth_controller_1.AuthController.validate);
 exports.default = router;
 //# sourceMappingURL=auth.routes.js.map
