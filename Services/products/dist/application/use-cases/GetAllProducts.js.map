@@ -1,1 +1,0 @@
-{"version":3,"file":"GetAllProducts.js","sourceRoot":"","sources":["../../../src/application/use-cases/GetAllProducts.ts"],"names":[],"mappings":";;;AAGA,MAAa,cAAc;IACzB,YAAoB,iBAAqC;QAArC,sBAAiB,GAAjB,iBAAiB,CAAoB;IAAG,CAAC;IAE7D,KAAK,CAAC,OAAO;QACX,OAAO,IAAI,CAAC,iBAAiB,CAAC,OAAO,EAAE,CAAC;IAC1C,CAAC;CACF;AAND,wCAMC"}
