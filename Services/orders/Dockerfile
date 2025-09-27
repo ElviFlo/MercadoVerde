@@ -1,21 +1,39 @@
-# Imagen base
-FROM node:22
-
-# Crear carpeta de la app
+# ---------- Builder ----------
+FROM node:22 AS builder
 WORKDIR /usr/src/app
 
-# Copiar package.json e instalar dependencias
+# Instala dependencias con lockfile si existe (más reproducible)
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
-# Copiar el resto del código
-COPY . .
+# Copia solo lo necesario para compilar
+COPY tsconfig*.json ./
+COPY src ./src
+# Si usas Prisma, descomenta estas dos líneas:
+# COPY prisma ./prisma
+# RUN npx prisma generate
 
-# Compilar TypeScript
+# Compila a /dist
 RUN npm run build
 
-# Exponer el puerto
+
+# ---------- Runner (producción) ----------
+FROM node:22-slim AS runner
+WORKDIR /usr/src/app
+ENV NODE_ENV=production
+
+# Instala solo deps de producción
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+# Copia el build ya compilado
+COPY --from=builder /usr/src/app/dist ./dist
+
+# Si necesitas assets estáticos o schemas, cópialos también:
+# COPY --from=builder /usr/src/app/src/public ./public
+
+# Expón el puerto (ajústalo a tu servicio)
 EXPOSE 3001
 
-# Comando de arranque
+# Arranque
 CMD ["node", "dist/main.js"]
