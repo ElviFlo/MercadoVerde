@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   auth:
     build:
@@ -9,6 +11,10 @@ services:
       - ./auth/.env
     depends_on:
       - db
+    # Si quieres esperar salud de la DB, descomenta y agrega healthcheck en db:
+    # depends_on:
+    #   db:
+    #     condition: service_healthy
 
   orders:
     build:
@@ -52,4 +58,15 @@ services:
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: microservices
     ports:
-      - "5433:5432"
+      - "5433:5432" # Externo:5433 -> Interno:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Healthcheck opcional:
+    # healthcheck:
+    #   test: ["CMD-SHELL", "pg_isready -U admin -d microservices"]
+    #   interval: 5s
+    #   timeout: 3s
+    #   retries: 5
+
+volumes:
+  pgdata:

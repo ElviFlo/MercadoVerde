@@ -1,29 +1,32 @@
-# Etapa 1: Construcción
-FROM node:18-alpine AS builder
+# ===== Etapa 1: build =====
+FROM node:20-alpine AS builder
 
 WORKDIR /usr/src/app
 
-# Copiar dependencias y lock file
+# 1) Instala deps con lockfile para builds reproducibles
 COPY package*.json ./
-RUN npm install
+# Si NO tienes package-lock.json, cambia a: RUN npm install
+RUN npm ci
 
-# Copiar el resto del código y compilar
+# 2) Copia el código y compila a dist/
 COPY . .
 RUN npm run build
 
 
-# Etapa 2: Producción
-FROM node:18-alpine
+# ===== Etapa 2: runtime =====
+FROM node:20-alpine
 
 WORKDIR /usr/src/app
 
-# Copiar package.json + lock y el código compilado
+# 3) Copia solo lo necesario para correr
 COPY --from=builder /usr/src/app/package*.json ./
+# Instala solo deps de producción; si no tienes package-lock, usa: npm install --omit=dev
+RUN npm ci --omit=dev
+
+# 4) Copia el build
 COPY --from=builder /usr/src/app/dist ./dist
 
-# Instalar solo dependencias de producción
-RUN npm ci --omit=dev   # más confiable que npm install
-
+ENV NODE_ENV=production
 EXPOSE 3001
 
 CMD ["node", "dist/main.js"]

@@ -1,7 +1,6 @@
 import { IUserRepository } from "../../domain/repositories/IUserRepository";
 import * as bcrypt from "bcrypt";
 import { jwtConfig } from "../../infrastructure/config/jwt.config";
-
 import * as jwt from "jsonwebtoken";
 
 export class LoginUser {
@@ -14,10 +13,14 @@ export class LoginUser {
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) throw new Error("Credenciales inválidas");
 
-    return jwt.sign(
-      { id: user.id, username: user.username },
-      jwtConfig.secret as jwt.Secret,
-      { expiresIn: "1h" }
-    );
+    const payload = { id: user.id, username: user.username };
+
+    const signOpts: jwt.SignOptions = {
+      expiresIn: jwtConfig.accessTtl,  // 👈 ahora está tipado bien
+    };
+    if (jwtConfig.issuer) signOpts.issuer = jwtConfig.issuer;
+    if (jwtConfig.audience) signOpts.audience = jwtConfig.audience;
+
+    return jwt.sign(payload, jwtConfig.secret as jwt.Secret, signOpts);
   }
 }

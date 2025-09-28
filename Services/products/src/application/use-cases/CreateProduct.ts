@@ -1,5 +1,5 @@
 import { Product } from "../../domain/entities/Product";
-import { IProductRepository } from "../../domain/repositories/IProductRepository";
+import { ProductRepository } from "../../domain/repositories/IProductRepository";
 import { randomUUID } from "crypto";
 
 interface CreateProductDTO {
@@ -10,18 +10,20 @@ interface CreateProductDTO {
 }
 
 export class CreateProduct{
-  constructor(private productRepository: IProductRepository) {}
+  constructor(private productRepository: ProductRepository) {}
 
   async execute(data: CreateProductDTO): Promise<Product> {
     const id = randomUUID();
-    const product = new Product(
+    const now = new Date();
+    const product: Product = {
       id,
-      data.name,
-      data.description ?? null,
-      data.price,
-      data.stock ?? 0,
-      new Date()
-    );
+      name: data.name,
+      description: data.description ?? null,
+      price: data.price,
+      createdBy: (data as any).createdBy ?? "unknown",
+      createdAt: now,
+      updatedAt: now,
+    };
     return this.productRepository.create(product);
   }
 }

@@ -1,27 +1,26 @@
-import { IProductRepository } from "../../domain/repositories/IProductRepository";
+import { ProductRepository } from "../../domain/repositories/IProductRepository";
 import { Product } from "../../domain/entities/Product";
 
 interface UpdateProductDTO {
   id: string;
   name?: string;
-  description?: string;
+  description?: string | null;
   price?: number;
-  stock?: number;
 }
 
 export class UpdateProduct{
-  constructor(private productRepository: IProductRepository) {}
+  constructor(private productRepository: ProductRepository) {}
 
   async execute(data: UpdateProductDTO): Promise<Product> {
     const existing = await this.productRepository.findById(data.id);
     if (!existing) throw new Error("Producto no encontrado");
-
-    existing.name = data.name ?? existing.name;
-    existing.description = data.description ?? existing.description;
-    existing.price = data.price ?? existing.price;
-    existing.stock = data.stock ?? existing.stock;
-    existing.updatedAt = new Date();
-
-    return this.productRepository.update(existing);
+    const updateData = {
+      name: data.name ?? existing.name,
+      description: data.description ?? existing.description,
+      price: data.price ?? existing.price,
+    };
+    const updated = await this.productRepository.update(data.id, updateData);
+    if (!updated) throw new Error("No se pudo actualizar el producto");
+    return updated;
   }
 }

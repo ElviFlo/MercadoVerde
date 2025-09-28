@@ -1,7 +1,7 @@
-import { IProductRepository } from "../../domain/repositories/IProductRepository";
+import { ProductRepository } from "../../domain/repositories/IProductRepository";
 
 export class DeleteProduct{
-  constructor(private productRepository: IProductRepository) {}
+  constructor(private productRepository: ProductRepository) {}
 
   async execute(id: string): Promise<void> {
     const existing = await this.productRepository.findById(id);

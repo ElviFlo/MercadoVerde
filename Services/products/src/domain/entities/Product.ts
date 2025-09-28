@@ -1,11 +1,22 @@
-export class Product {
-  constructor(
-    public id: string,
-    public name: string,
-    public description: string | null,
-    public price: number,
-    public stock: number,
-    public createdAt: Date = new Date(),
-    public updatedAt?: Date
-  ) {}
+export interface Product {
+  id: string;
+  name: string;
+  description?: string | null;
+  price: number;           // en tu código manejarás number, se convierte a NUMERIC en DB
+  createdBy: string;       // user id del JWT
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateProductDTO {
+  name: string;
+  description?: string | null;
+  price: number;
+  createdBy: string;
+}
+
+export interface UpdateProductDTO {
+  name?: string;
+  description?: string | null;
+  price?: number;
 }
