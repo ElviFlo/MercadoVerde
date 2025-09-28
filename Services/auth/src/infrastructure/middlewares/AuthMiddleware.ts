@@ -1,17 +1,16 @@
 import { Request, Response, NextFunction } from "express";
-import * as jwt from "jsonwebtoken";
-import { jwtConfig } from "../config/jwt.config";
+import { ValidateToken } from "../../application/use-cases/ValidateToken";
 
-export function AuthMiddleware(req: Request, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: "No token provided" });
+const validateToken = new ValidateToken();
 
-  const token = authHeader.split(" ")[1];
+export async function authGuard(req: Request, res: Response, next: NextFunction) {
+  const h = req.headers.authorization || "";
+  const token = h.startsWith("Bearer ") ? h.slice(7) : null;
+  if (!token) return res.status(401).json({ message: "Falta Bearer token" });
   try {
-    const decoded = jwt.verify(token, jwtConfig.secret);
-    (req as any).user = decoded;
-    next();
+    (req as any).user = await validateToken.execute(token);
+    return next();
   } catch {
-    return res.status(401).json({ error: "Invalid token" });
+    return res.status(401).json({ message: "Token inválido o expirado" });
   }
 }

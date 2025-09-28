@@ -1,4 +1,6 @@
-export const jwtConfig: { secret: string; expiresIn: string } = {
-  secret: process.env.JWT_SECRET || "supersecret",
-  expiresIn: process.env.JWT_EXPIRES_IN || "1h",
+export const jwtConfig = {
+  secret: process.env.JWT_SECRET || "dev_secret_change_me",
+  refreshSecret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || "dev_refresh_secret_change_me",
+  accessTtl: process.env.JWT_ACCESS_TTL || "15m",
+  refreshTtl: process.env.JWT_REFRESH_TTL || "7d",
 };
