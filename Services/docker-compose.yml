@@ -20,7 +20,7 @@ services:
       - ./orders/.env
     depends_on:
       - db
-  
+
   products:
     build:
       context: ./products
@@ -29,6 +29,17 @@ services:
       - "3003:3003"
     env_file:
       - ./products/.env
+    depends_on:
+      - db
+
+  cart:
+    build:
+      context: ./cart
+    container_name: cart_service
+    ports:
+      - "3004:3002"
+    env_file:
+      - ./cart/.env
     depends_on:
       - db
 
