@@ -1,26 +1,13 @@
-import { Request, Response, Router } from "express";
-import { InMemoryOrderRepository } from "../repositories/order.repository.impl";
-import { CreateOrderUseCase } from "../../application/use-cases/create-order.use-case";
-import { GetOrdersUseCase } from "../../application/use-cases/get-orders.use-case";
-import { authenticateToken } from "../middlewares/auth.middleware";
+// Services/orders/src/infrastructure/routes/order.routes.ts
+import { Router } from "express";
+import { OrderController } from "../controllers/order.controller";
 
 const router = Router();
-const orderRepository = new InMemoryOrderRepository();
-const createOrderUseCase = new CreateOrderUseCase(orderRepository);
-const getOrdersUseCase = new GetOrdersUseCase(orderRepository);
 
-router.post("/", authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const order = await createOrderUseCase.execute(req.body);
-    res.status(201).json(order);
-  } catch (error: any) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-router.get("/", authenticateToken, async (_req: Request, res: Response) => {
-  const orders = await getOrdersUseCase.execute();
-  res.json(orders);
-});
+router.get("/orders", OrderController.getAll);
+router.get("/orders/:id", OrderController.getById);
+router.post("/orders", OrderController.create);
+router.put("/orders/:id/status", OrderController.updateStatus);
+router.delete("/orders/:id", OrderController.delete);
 
 export default router;

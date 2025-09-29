@@ -1,5 +1,11 @@
-import { Category } from "../../domain/Category";
-import CategoryModel from "../../infrastructure/models/CategoryModel";
+import CategoryModel from "../../infrastructure/CategoryModel";
+
+// Category interface
+interface Category {
+  nombre: string;
+  descripcion?: string;
+  id?: string;
+}
 
 export class CreateCategory {
   async execute(data: Category) {

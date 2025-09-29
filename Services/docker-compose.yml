@@ -1,56 +1,6 @@
-version: "3.9"
-
 services:
-  auth:
-    build:
-      context: ./auth
-    container_name: auth_service
-    ports:
-      - "3001:3001"
-    env_file:
-      - ./auth/.env
-    depends_on:
-      - db
-    # Si quieres esperar salud de la DB, descomenta y agrega healthcheck en db:
-    # depends_on:
-    #   db:
-    #     condition: service_healthy
-
-  orders:
-    build:
-      context: ./orders
-    container_name: orders_service
-    ports:
-      - "3002:3002"
-    env_file:
-      - ./orders/.env
-    depends_on:
-      - db
-
-  products:
-    build:
-      context: ./products
-    container_name: products_service
-    ports:
-      - "3003:3003"
-    env_file:
-      - ./products/.env
-    depends_on:
-      - db
-
-  cart:
-    build:
-      context: ./cart
-    container_name: cart_service
-    ports:
-      - "3004:3002"
-    env_file:
-      - ./cart/.env
-    depends_on:
-      - db
-
   db:
-    image: postgres:15
+    image: postgres:15-alpine
     container_name: microservices_db
     restart: always
     environment:
@@ -58,15 +8,96 @@ services:
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: microservices
     ports:
-      - "5433:5432" # Externo:5433 -> Interno:5432
+      - "5433:5432"   # host:container
     volumes:
       - pgdata:/var/lib/postgresql/data
-    # Healthcheck opcional:
-    # healthcheck:
-    #   test: ["CMD-SHELL", "pg_isready -U admin -d microservices"]
-    #   interval: 5s
-    #   timeout: 3s
-    #   retries: 5
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d microservices"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  auth:
+    build:
+      context: ./auth
+    container_name: auth_service
+    env_file:
+      - ./auth/.env
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    # Healthcheck apunta a /health (público)
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || curl -fsS http://localhost:3001/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  products:
+    build:
+      context: ./products
+    container_name: products_service
+    env_file:
+      - ./products/.env
+    ports:
+      - "3003:3003"
+    depends_on:
+      db:
+        condition: service_healthy
+      auth:
+        condition: service_started
+    # Healthcheck a /health (público)
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3003/health || curl -fsS http://localhost:3003/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  orders:
+    build:
+      context: ./orders
+    container_name: orders_service
+    env_file:
+      - ./orders/.env
+    ports:
+      - "3002:3002"
+    depends_on:
+      db:
+        condition: service_healthy
+      # Si VALIDATE_PRODUCTS=true en orders/.env, conviene depender de products healthy:
+      products:
+        condition: service_healthy
+    # Healthcheck a /health (público)
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3002/health || curl -fsS http://localhost:3002/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  cart:
+    profiles: ["cart"]   # <-- no se levanta a menos que habilites este perfil
+    build:
+      context: ./cart
+    container_name: cart_service
+    env_file:
+      - ./cart/.env
+    # Ajusta el puerto si el servicio interno NO corre en 3004
+    ports:
+      - "3004:3004"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3004/health || curl -fsS http://localhost:3004/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
 
   voice:
     build:

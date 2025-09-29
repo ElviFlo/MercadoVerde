@@ -2,55 +2,52 @@
 import "dotenv/config";
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
-import authRoutes from "./infrastructure/routes/auth.routes";
-import { setupSwagger } from "./infrastructure/swagger/auth.swagger"; // <= ruta correcta
+
+import authRouter from "./infrastructure/routes/auth.routes";
+import { setupSwagger } from "./infrastructure/swagger/auth.swagger";
 
 const app = express();
+const PORT = Number(process.env.PORT ?? 3001);
 
-/* Middlewares base */
+app.disable("x-powered-by");
 app.use(cors());
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-/* Health & root */
-app.get("/health", (_req: Request, res: Response) =>
-  res.status(200).json({ ok: true, service: "auth" })
-);
-app.get("/", (_req: Request, res: Response) =>
-  res.json({ ok: true, service: "auth" })
-);
-
-/* Rutas */
-app.use("/auth", authRoutes);
-
-/* Swagger (/docs) */
-setupSwagger(app);
-
-/* 404 y error handler */
-app.use((_req: Request, res: Response) => res.status(404).json({ message: "Not Found" }));
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  console.error("[auth] Unhandled error:", err);
-  res
-    .status(typeof err?.status === "number" ? err.status : 500)
-    .json({ message: err?.message || "Internal Server Error" });
+// -------- Health público --------
+app.get("/health", (_req: Request, res: Response) => {
+  res.status(200).json({ ok: true, service: "auth" });
 });
 
-/* Arranque */
-const PORT = Number(process.env.PORT) || 3001;
-const server = app.listen(PORT, "0.0.0.0", () =>
-  console.log(`[auth] escuchando en http://0.0.0.0:${PORT}`)
-);
+// -------- Swagger público (/docs y /docs.json) --------
+setupSwagger(app);
 
-/* Apagado limpio + errores no controlados */
+// ❌ No apliques ningún guard global antes de Swagger o romperá /docs
+// app.use(authenticateToken);
+
+// -------- Rutas de Auth --------
+app.use("/auth", authRouter);
+
+// -------- 404 al final --------
+app.use((_req, res) => res.status(404).json({ message: "Not found" }));
+
+// -------- Manejo de errores --------
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  console.error("[auth] Error:", err);
+  res.status(err?.status || 500).json({ message: err?.message || "Internal Server Error" });
+});
+
+// -------- Arranque + shutdown limpio --------
+const server = app.listen(PORT, () => {
+  console.log(`[auth] escuchando en http://0.0.0.0:${PORT}`);
+  console.log(`[auth] Swagger en http://localhost:${PORT}/docs`);
+});
+
 const shutdown = (signal: string) => {
   console.log(`[auth] ${signal} recibido, cerrando servidor...`);
-  server.close(() => {
-    console.log("[auth] servidor cerrado.");
-    process.exit(0);
-  });
+  server.close(() => process.exit(0));
   setTimeout(() => process.exit(1), 10_000).unref();
 };
-
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("unhandledRejection", (r) => console.error("[auth] Unhandled Rejection:", r));

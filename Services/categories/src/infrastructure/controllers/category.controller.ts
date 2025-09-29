@@ -5,7 +5,7 @@ import { GetCategoryById } from "../../application/use-cases/get-category-by-id.
 import { UpdateCategory } from "../../application/use-cases/update-category.use-case";
 import { DeleteCategory } from "../../application/use-cases/delete-category.use-case";
 
-export class CategoryController {
+export default class CategoryController {
   async create(req: Request, res: Response) {
     try {
       const useCase = new CreateCategory();
