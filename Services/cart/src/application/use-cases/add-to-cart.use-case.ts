@@ -1,9 +1,20 @@
-import { CartRepositoryImpl } from '../../infrastructure/repositories/cart.repository.impl';
+import { Inject, Injectable } from '@nestjs/common';
+import { CartRepository } from '../../infrastructure/repositories/cart.repository';
+import { CartItem } from '../../domain/entities/cart-item.entity';
 
+@Injectable()
 export class AddToCartUseCase {
-  constructor(private repo = new CartRepositoryImpl()) {}
+  constructor(
+    @Inject('CartRepository') private readonly repo: CartRepository,
+  ) {}
 
-  async execute(userId: number, productId: number, quantity: number, price: number) {
-    return this.repo.addItemToCart(userId, productId, quantity, price);
+  execute(input: {
+    userId: string;
+    productId: string;   // UUID string
+    quantity: number;
+    price: number;
+  }): Promise<CartItem> {
+    const { userId, productId, quantity, price } = input;
+    return this.repo.addItem(userId, productId, quantity, price);
   }
 }

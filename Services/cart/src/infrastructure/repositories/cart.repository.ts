@@ -1,7 +1,8 @@
-import { Cart } from '../../domain/entities/cart.entity';
+import { CartItem } from '../../domain/entities/cart-item.entity';
 
-export interface ICartRepository {
-  getCartByUserId(userId: number): Promise<Cart | null>;
-  addItemToCart(userId: number, productId: number, quantity: number, price: number): Promise<any>;
-  removeItem(itemId: string): Promise<any>;
+export interface CartRepository {
+  addItem(userId: string, productId: string, quantity: number, price: number): Promise<CartItem>;
+  getItems(userId: string): Promise<CartItem[]>;
+  removeItem(userId: string, productId: string): Promise<void>;
+  clear(userId: string): Promise<void>;
 }

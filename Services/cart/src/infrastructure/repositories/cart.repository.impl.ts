@@ -1,44 +1,46 @@
-import prisma from '../db';
-import { ICartRepository } from './cart.repository';
+import { Injectable } from '@nestjs/common';
+import { CartRepository } from './cart.repository';
+import { CartItem } from '../../domain/entities/cart-item.entity';
+import { randomUUID } from 'crypto';
 
-export class CartRepositoryImpl implements ICartRepository {
-  async getCartByUserId(userId: number) {
-    return prisma.cart.findFirst({
-      where: { userId },
-      include: { items: true }
-    });
-  }
+@Injectable()
+export class CartRepositoryImpl implements CartRepository {
+  private items: CartItem[] = [];
 
-  async addItemToCart(userId: number, productId: number, quantity: number, price: number) {
-    let cart = await prisma.cart.findFirst({ where: { userId } });
-    if (!cart) {
-      cart = await prisma.cart.create({
-        data: {
-          userId,
-          items: { create: [{ productId, quantity, price }] }
-        },
-        include: { items: true }
-      });
-      return cart;
+  async addItem(userId: string, productId: string, quantity: number, price: number): Promise<CartItem> {
+    const now = new Date();
+
+    // si ya existe el mismo producto en el carrito del usuario, acumula la cantidad
+    const idx = this.items.findIndex(i => i.userId === userId && i.productId === productId);
+    if (idx >= 0) {
+      const it = this.items[idx];
+      const updated: CartItem = { ...it, quantity: it.quantity + quantity, price, updatedAt: now };
+      this.items[idx] = updated;
+      return updated;
     }
 
-    const existing = await prisma.cartItem.findFirst({
-      where: { cartId: cart.id, productId }
-    });
-
-    if (existing) {
-      return prisma.cartItem.update({
-        where: { id: existing.id },
-        data: { quantity: existing.quantity + quantity }
-      });
-    }
-
-    return prisma.cartItem.create({
-      data: { cartId: cart.id, productId, quantity, price }
-    });
+    const created: CartItem = {
+      id: randomUUID(),
+      userId,
+      productId,     // UUID string
+      quantity,
+      price,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.items.push(created);
+    return created;
   }
 
-  async removeItem(itemId: string) {
-    return prisma.cartItem.delete({ where: { id: itemId } });
+  async getItems(userId: string): Promise<CartItem[]> {
+    return this.items.filter(i => i.userId === userId);
+  }
+
+  async removeItem(userId: string, productId: string): Promise<void> {
+    this.items = this.items.filter(i => !(i.userId === userId && i.productId === productId));
+  }
+
+  async clear(userId: string): Promise<void> {
+    this.items = this.items.filter(i => i.userId !== userId);
   }
 }

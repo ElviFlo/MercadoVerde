@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   db:
     image: postgres:15-alpine
@@ -8,7 +10,7 @@ services:
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: microservices
     ports:
-      - "5433:5432"   # host:container
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -76,7 +78,6 @@ services:
     restart: unless-stopped
 
   cart:
-    profiles: ["cart"]
     build:
       context: ./cart
     container_name: cart_service
@@ -87,6 +88,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      auth:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3005/health || curl -fsS http://localhost:3005/health || exit 1"]
       interval: 10s
@@ -103,8 +106,6 @@ services:
     ports:
       - "3004:3004"
     depends_on:
-      db:
-        condition: service_healthy          # añadido
       auth:
         condition: service_started
     healthcheck:
@@ -120,7 +121,7 @@ services:
       dockerfile: Dockerfile
     container_name: voice_service
     ports:
-      - "3006:3005"  # host 3006 -> container 3005 (evita conflicto con cart)
+      - "3006:3006"
     env_file:
       - ./voice/.env
     depends_on:

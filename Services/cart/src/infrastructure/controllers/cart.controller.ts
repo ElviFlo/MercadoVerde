@@ -1,37 +1,78 @@
-import { Controller, Get, Post, Body, Param, Delete, UsePipes, ValidationPipe } from '@nestjs/common';
-import { ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
-import { GetCartUseCase } from '../../application/use-cases/get-cart.use-case';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiParam, ApiTags } from '@nestjs/swagger';
+
 import { AddToCartUseCase } from '../../application/use-cases/add-to-cart.use-case';
+import { GetCartUseCase } from '../../application/use-cases/get-cart.use-case';
 import { RemoveFromCartUseCase } from '../../application/use-cases/remove-from-cart.use-case';
+
 import { AddToCartDto } from '../dto/add-to-cart.dto';
+import { RemoveFromCartDto } from '../dto/remove-from-cart.dto';
+
+// src/infrastructure/controllers/cart.controller.ts
+import { JwtAuthGuard } from '../auth/jwt.middleware';
+;
 
 @ApiTags('cart')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('cart')
 export class CartController {
-  private getCart = new GetCartUseCase();
-  private addToCart = new AddToCartUseCase();
-  private removeFromCart = new RemoveFromCartUseCase();
+  constructor(
+    private readonly addUC: AddToCartUseCase,
+    private readonly getUC: GetCartUseCase,
+    private readonly removeUC: RemoveFromCartUseCase,
+  ) {}
 
-  @ApiParam({ name: 'userId', type: Number })
-  @Get(':userId')
-  async getCartByUser(@Param('userId') userId: string) {
-    return this.getCart.execute(Number(userId));
+  @Get('items')
+  getItems(@Req() req: any) {
+    const userId: string = req.user?.sub ?? req.user?.id;
+    return this.getUC.execute(userId);
   }
 
-  @ApiParam({ name: 'userId', type: Number })
-  @ApiBody({ type: AddToCartDto })
-  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
-  @Post(':userId/items')
-  async addItem(
-    @Param('userId') userId: string,
-    @Body() body: AddToCartDto
-  ) {
-    return this.addToCart.execute(Number(userId), body.productId, body.quantity, body.price);
+  @Post('items')
+  addItem(@Req() req: any, @Body() dto: AddToCartDto) {
+    const userId: string = req.user?.sub ?? req.user?.id;
+    return this.addUC.execute({
+      userId,
+      productId: dto.productId, // UUID string
+      quantity: dto.quantity,
+      price: dto.price,
+    });
   }
 
-  @ApiParam({ name: 'itemId', type: String })
-  @Delete('items/:itemId')
-  async removeItem(@Param('itemId') itemId: string) {
-    return this.removeFromCart.execute(itemId);
+  @Delete('items')
+  removeItemByBody(@Req() req: any, @Body() dto: RemoveFromCartDto) {
+    const userId: string = req.user?.sub ?? req.user?.id;
+    return this.removeUC.execute({ userId, productId: dto.productId });
+  }
+
+  @Delete('items/:productId')
+  @ApiParam({
+    name: 'productId',
+    description: 'UUID del producto',
+    example: 'a3f1bc00-9e5a-4d3b-84d4-7a1f3d0a7f3a',
+  })
+  removeItemByParam(@Req() req: any, @Param('productId') productId: string) {
+    const userId: string = req.user?.sub ?? req.user?.id;
+    return this.removeUC.execute({ userId, productId });
+  }
+
+  @Delete('clear')
+  async clear(@Req() req: any) {
+    const userId: string = req.user?.sub ?? req.user?.id;
+    const items = await this.getUC.execute(userId);
+    for (const it of items) {
+      await this.removeUC.execute({ userId, productId: it.productId });
+    }
+    return { ok: true, cleared: items.length };
   }
 }
