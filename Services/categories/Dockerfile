@@ -1,39 +1,25 @@
-# Use Node.js 18 Alpine as base image
-FROM node:18-alpine
-
-# Set working directory
+# Build stage
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy package files
+# Copiar package.json primero para aprovechar caché
 COPY package*.json ./
+RUN npm ci
 
-# Install dependencies
-RUN npm ci --only=production
-
-# Copy source code
+# Copiar todo el código
 COPY . .
 
-# Build TypeScript
 RUN npm run build
 
-# Remove dev dependencies and source files
-RUN npm prune --production && \
-    rm -rf src tsconfig.json nodemon.json
+# Runtime stage
+FROM node:20-alpine
+WORKDIR /app
+ENV NODE_ENV=production
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+COPY --from=builder /app/package*.json ./
+RUN npm ci --omit=dev
 
-# Change ownership of the app directory
-RUN chown -R nodejs:nodejs /app
-USER nodejs
+COPY --from=builder /app/dist ./dist
 
-# Expose port
-EXPOSE 4001
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:4001/categories', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
-
-# Start the application
+EXPOSE 3004
 CMD ["node", "dist/main.js"]

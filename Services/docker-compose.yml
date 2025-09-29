@@ -28,7 +28,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # Healthcheck apunta a /health (público)
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || curl -fsS http://localhost:3001/health || exit 1"]
       interval: 10s
@@ -49,7 +48,6 @@ services:
         condition: service_healthy
       auth:
         condition: service_started
-    # Healthcheck a /health (público)
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3003/health || curl -fsS http://localhost:3003/health || exit 1"]
       interval: 10s
@@ -68,10 +66,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      # Si VALIDATE_PRODUCTS=true en orders/.env, conviene depender de products healthy:
       products:
         condition: service_healthy
-    # Healthcheck a /health (público)
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3002/health || curl -fsS http://localhost:3002/health || exit 1"]
       interval: 10s
@@ -80,18 +76,35 @@ services:
     restart: unless-stopped
 
   cart:
-    profiles: ["cart"]   # <-- no se levanta a menos que habilites este perfil
+    profiles: ["cart"]
     build:
       context: ./cart
     container_name: cart_service
     env_file:
       - ./cart/.env
-    # Ajusta el puerto si el servicio interno NO corre en 3004
     ports:
-      - "3004:3004"
+      - "3005:3005"
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3005/health || curl -fsS http://localhost:3005/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  categories:
+    build:
+      context: ./categories
+    container_name: categories_service
+    env_file:
+      - ./categories/.env
+    ports:
+      - "3004:3004"
+    depends_on:
+      auth:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3004/health || curl -fsS http://localhost:3004/health || exit 1"]
       interval: 10s

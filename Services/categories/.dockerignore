@@ -1,18 +1,23 @@
+# Carpetas y archivos a ignorar
 node_modules
-npm-debug.log
-.git
-.gitignore
-README.md
-.env
-.nyc_output
+dist
 coverage
+.nyc_output
 .vscode
 .idea
+
+# Archivos de entorno y logs
+.env
 *.log
-dist
-src
-tsconfig.json
-nodemon.json
+npm-debug.log*
+
+# Git y configs locales
+.git
+.gitignore
+Dockerfile
+docker-compose.yml
+
+# Tests (opcional si no quieres empaquetarlos)
 test
 tests
 __tests__

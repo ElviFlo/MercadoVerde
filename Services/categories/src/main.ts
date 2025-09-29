@@ -1,82 +1,42 @@
-import express from "express";
-import mongoose from "mongoose";
-import dotenv from "dotenv";
-import cors from "cors";
-import swaggerUi from "swagger-ui-express";
-import { swaggerSpec } from "./infrastructure/swagger/swagger.config";
-import categoryRoutes from "./infrastructure/categoryRoutes";
-
+import 'reflect-metadata';
+import * as dotenv from 'dotenv';
 dotenv.config();
 
-const app = express();
-const PORT = process.env.PORT || 4001;
+import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AppModule } from './app.module';
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
 
-// Swagger documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  // Validación global
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    service: 'categories-service',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+  // CORS (útil para dev y gateway)
+  app.enableCors({
+    origin: true, // en prod puedes restringirlo
+    credentials: true,
   });
-});
 
-// API routes
-app.use("/categories", categoryRoutes);
+  // Configuración de Swagger
+  const config = new DocumentBuilder()
+    .setTitle('MercadoVerde - Categories API')
+    .setDescription('CRUD de categorías protegido con JWT')
+    .setVersion('1.0.0')
+    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
+    .build();
 
-// Root endpoint
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Categories Service API',
-    version: '1.0.0',
-    documentation: '/api-docs',
-    health: '/health',
-    endpoints: {
-      categories: '/categories'
-    }
-  });
-});
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('docs', app, document);
 
-// Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    error: 'Something went wrong!',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
-  });
-});
+  // Exponer JSON crudo como en products
+  app.getHttpAdapter().get('/docs.json', (req, res) => res.json(document));
 
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ 
-    error: 'Not Found',
-    message: `Route ${req.originalUrl} not found`
-  });
-});
+  // Puerto (orders usa 3002; products 3003; categories -> 3004)
+  const port = Number(process.env.PORT ?? 3004);
+  await app.listen(port);
+  console.log(`🚀 Categories service running on port ${port}`);
+}
 
-// Connect to MongoDB and start server
-const startServer = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/mercadoverde");
-    console.log("✅ Conectado a MongoDB");
-    
-    app.listen(PORT, () => {
-      console.log(`🚀 Categories service corriendo en puerto ${PORT}`);
-      console.log(`📚 Documentación Swagger: http://localhost:${PORT}/api-docs`);
-      console.log(`❤️  Health check: http://localhost:${PORT}/health`);
-      console.log(`📋 API endpoints: http://localhost:${PORT}/categories`);
-    });
-  } catch (error) {
-    console.error("❌ Error al conectar con MongoDB:", error);
-    process.exit(1);
-  }
-};
-
-startServer();
+bootstrap();
