@@ -1,8 +1,14 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { CategoryRepository } from '../../domain/repositories/category.repository';
 
 @Injectable()
 export class GetCategoryTreeUseCase {
-  constructor(@Inject('CategoryRepository') private repo: CategoryRepository) {}
-  execute() { return this.repo.listTree(); }
+  constructor(
+    @Inject('CategoryRepository')
+    private readonly categoryRepo: CategoryRepository,
+  ) {}
+
+  async execute() {
+    return this.categoryRepo.getTree();
+  }
 }

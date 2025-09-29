@@ -1,27 +1,24 @@
 import { Injectable } from '@nestjs/common';
-import { CategoryRepository } from '../../domain/repositories/category.repository';
+import { CategoryRepository, FindParams, CategoryNode } from '../../domain/repositories/category.repository';
 import { Category } from '../../domain/entities/category.entity';
 import { randomUUID } from 'crypto';
 
 @Injectable()
 export class MemoryCategoryRepository implements CategoryRepository {
-  private data: Category[] = [
-    new Category(randomUUID(), 'Bebidas', 'bebidas', null, true),
-    // ejemplo de subcategoría
-    // (se reasigna parentId tras crear raíz si lo deseas)
-  ];
+  private data: Category[] = [];
 
-  async create(data: Omit<Category, 'id'|'createdAt'|'updatedAt'>): Promise<Category> {
-    const entity = new Category(randomUUID(), data.name, data.slug, data.parentId ?? null, data.active ?? true);
-    this.data.push(entity);
-    return entity;
+  async create(input: Omit<Category, 'id'>): Promise<Category> {
+    const created: Category = { id: randomUUID(), ...input };
+    this.data.push(created);
+    return created;
   }
 
-  async update(id: string, data: Partial<Omit<Category, 'id'>>): Promise<Category> {
+  async update(id: string, patch: Partial<Category>): Promise<Category> {
     const idx = this.data.findIndex(c => c.id === id);
     if (idx < 0) throw new Error('Category not found');
-    this.data[idx] = { ...this.data[idx], ...data, updatedAt: new Date() };
-    return this.data[idx];
+    const updated = { ...this.data[idx], ...patch, updatedAt: patch.updatedAt ?? new Date() };
+    this.data[idx] = updated;
+    return updated;
   }
 
   async delete(id: string): Promise<void> {
@@ -36,25 +33,27 @@ export class MemoryCategoryRepository implements CategoryRepository {
     return this.data.find(c => c.slug === slug) ?? null;
   }
 
-  async list(params: { q?: string; active?: boolean; parentId?: string | null } = {}): Promise<Category[]> {
+  async findAll(params: FindParams = {}): Promise<Category[]> {
     const { q, active, parentId } = params;
     return this.data.filter(c => {
-      const okQ = q ? (c.name.toLowerCase().includes(q.toLowerCase()) || c.slug.toLowerCase().includes(q.toLowerCase())) : true;
-      const okA = active === undefined ? true : c.active === active;
-      const okP = parentId === undefined ? true : (c.parentId ?? null) === (parentId ?? null);
-      return okQ && okA && okP;
-    }).sort((a,b)=>a.name.localeCompare(b.name));
+      if (q && !(c.name.toLowerCase().includes(q.toLowerCase()) || c.slug.includes(q.toLowerCase()))) return false;
+      if (active !== undefined && c.active !== active) return false;
+      if (parentId === null && c.parentId !== null) return false;      // solo raíces
+      if (parentId !== undefined && parentId !== null && c.parentId !== parentId) return false;
+      return true;
+    });
   }
 
-  async listTree(): Promise<any[]> {
-    const byParent = new Map<string | null, Category[]>();
+  async getTree(): Promise<CategoryNode[]> {
+    const byParent = new Map<string | null, CategoryNode[]>();
     for (const c of this.data) {
-      const key = c.parentId ?? null;
-      if (!byParent.has(key)) byParent.set(key, []);
-      byParent.get(key)!.push(c);
+      const node: CategoryNode = { ...c, children: [] };
+      const arr = byParent.get(c.parentId ?? null) ?? [];
+      arr.push(node);
+      byParent.set(c.parentId ?? null, arr);
     }
-    const build = (pid: string | null): any[] =>
-      (byParent.get(pid) ?? []).map(n => ({ ...n, children: build(n.id) }));
-    return build(null);
+    const attach = (parentId: string | null): CategoryNode[] =>
+      (byParent.get(parentId) ?? []).map(n => ({ ...n, children: attach(n.id) }));
+    return attach(null);
   }
 }

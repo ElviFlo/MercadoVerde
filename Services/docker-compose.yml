@@ -103,6 +103,8 @@ services:
     ports:
       - "3004:3004"
     depends_on:
+      db:
+        condition: service_healthy          # añadido
       auth:
         condition: service_started
     healthcheck:
@@ -118,7 +120,7 @@ services:
       dockerfile: Dockerfile
     container_name: voice_service
     ports:
-      - "3005:3005"
+      - "3006:3005"  # host 3006 -> container 3005 (evita conflicto con cart)
     env_file:
       - ./voice/.env
     depends_on:

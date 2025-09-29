@@ -1,12 +1,14 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { CategoryRepository } from '../../domain/repositories/category.repository';
 
 @Injectable()
 export class GetCategoryByIdUseCase {
-  constructor(@Inject('CategoryRepository') private repo: CategoryRepository) {}
+  constructor(
+    @Inject('CategoryRepository')
+    private readonly categoryRepo: CategoryRepository,
+  ) {}
+
   async execute(id: string) {
-    const cat = await this.repo.findById(id);
-    if (!cat) throw new NotFoundException('Category not found');
-    return cat;
+    return this.categoryRepo.findById(id);
   }
 }
