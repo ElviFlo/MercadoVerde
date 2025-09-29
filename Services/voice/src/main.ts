@@ -1,30 +1,34 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { Module } from '@nestjs/common';
+import { SpeechController } from './infrastructure/controllers/speech.controller';
+import { SpeechService } from './infrastructure/services/speech.service';
+import { prisma } from './infrastructure/db';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
+@Module({
+  controllers: [SpeechController],
+  providers: [
+    SpeechService,
+    { provide: 'PRISMA', useValue: prisma },
+  ],
+})
+export class AppModule {}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // global validation
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-
-  // Swagger (opcional, útil para probar)
+  // Configuración de Swagger
   const config = new DocumentBuilder()
-    .setTitle('Voice Service (Kora)')
-    .setDescription('Endpoints para procesamiento de voz')
-    .setVersion('0.1')
+    .setTitle('Voice Service')
+    .setDescription('Microservicio de voz Kora')
+    .setVersion('1.0')
     .build();
-  const doc = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api-docs', app, doc);
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
 
-  // puerto desde ENV o default 3005
-  const port = process.env.PORT ? Number(process.env.PORT) : 3005;
-  const prefix = process.env.GLOBAL_PREFIX ?? 'api';
-  app.setGlobalPrefix(prefix);
-
-  await app.listen(port);
-  console.log(`Voice service listening on ${port} (prefix: /${prefix})`);
+  await app.listen(3005);
+  console.log('Voice service listening on 3005');
+  console.log('Swagger UI available at http://localhost:3005/api');
 }
 bootstrap();

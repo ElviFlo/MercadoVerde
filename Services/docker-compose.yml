@@ -68,5 +68,17 @@ services:
     #   timeout: 3s
     #   retries: 5
 
+  voice:
+    build:
+      context: ./voice
+      dockerfile: Dockerfile
+    container_name: voice_service
+    ports:
+      - "3005:3005"
+    env_file:
+      - ./voice/.env
+    depends_on:
+      - db
+
 volumes:
   pgdata:
