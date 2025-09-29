@@ -3,49 +3,58 @@ import "dotenv/config";
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 
-// ⬅️ ruta correcta del router
+// Rutas del dominio
 import productsRouter from "./infrastructure/routes/product.routes";
 
-// Swagger (según tu árbol está en src/swagger)
+// Swagger
 import { setupSwagger } from "./infrastructure/swagger/product.swagger";
 
-// Si usas PG más adelante
+// Si usas PG (opcional)
 import { ensureSchema } from "./infrastructure/db/pg";
 
-const app = express();
+// Si tienes un middleware de auth a nivel app, IMPORTALO pero NO LO APLIQUES a /health
+// import { authenticateToken } from "./infrastructure/middlewares/authenticateToken";
 
-/* Middlewares base */
+const app = express();
+const PORT = Number(process.env.PORT ?? 3003);
+
+// Seguridad y parsers
+app.disable("x-powered-by");
 app.use(cors());
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-/* Health & raíz */
-app.get("/health", (_req: Request, res: Response) =>
-  res.status(200).json({ ok: true, service: "products" })
-);
-app.get("/", (_req: Request, res: Response) =>
-  res.json({ ok: true, service: "products" })
-);
-
-/* Rutas del dominio */
-app.use("/products", productsRouter);
-
-/* Swagger (/docs y /docs.json) */
-setupSwagger(app);
-
-/* 404 + error handler */
-app.use((_req: Request, res: Response) => res.status(404).json({ message: "Not Found" }));
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  console.error("[products] Unhandled error:", err);
-  const status = typeof err?.status === "number" ? err.status : 500;
-  res.status(status).json({ message: err?.message || "Internal Server Error" });
+// ---------- ENDPOINT PÚBLICO PARA HEALTHCHECK (SIN JWT) ----------
+app.get("/health", (_req: Request, res: Response) => {
+  res.status(200).json({ ok: true, service: "products" });
 });
 
-/* Arranque */
-const PORT = Number(process.env.PORT) || 3003;
-const server = app.listen(PORT, "0.0.0.0", async () => {
-  // opcional: crea tablas si usas PG
-  try { await ensureSchema?.(); } catch (e) { /* ignore si no usas PG */ }
+// Swagger (si quieres público para probar en local, déjalo tal cual)
+setupSwagger(app);
+
+// Si quieres proteger TODO lo demás con JWT a nivel app, aplica el middleware DESPUÉS de /health y Swagger
+// app.use(authenticateToken);
+
+// Rutas del servicio
+app.use("/products", /* authenticateToken, */ productsRouter);
+
+// 404 handler
+app.use((_req, res) => {
+  res.status(404).json({ message: "Not found" });
+});
+
+// Error handler
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  console.error("[products] Error:", err);
+  res.status(err?.status || 500).json({ message: err?.message || "Internal Server Error" });
+});
+
+const server = app.listen(PORT, async () => {
+  try {
+    await ensureSchema?.(); // si no usas PG, no pasa nada
+  } catch (_e) {
+    // ignora si no tienes DB todavía
+  }
   console.log(`[products] escuchando en http://0.0.0.0:${PORT}`);
 });
 

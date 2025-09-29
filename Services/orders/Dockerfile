@@ -1,17 +1,29 @@
-# ---------- Builder ----------
-FROM node:22 AS builder
+# ---------- builder ----------
+FROM node:20-alpine AS builder
 WORKDIR /usr/src/app
 
-# Instala dependencias
+# deps
 COPY package*.json ./
 RUN npm ci
 
-# Copia solo lo necesario para compilar
+# build
 COPY tsconfig*.json ./
 COPY src ./src
-
-# Instala TypeScript temporalmente para la compilación
-RUN npm install typescript
-
-# Compila a /dist
 RUN npm run build
+
+# ---------- runtime ----------
+FROM node:20-alpine
+WORKDIR /usr/src/app
+ENV NODE_ENV=production
+
+# para healthcheck
+RUN apk add --no-cache curl wget
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+# solo el build final
+COPY --from=builder /usr/src/app/dist ./dist
+
+EXPOSE 3002
+CMD ["node", "dist/main.js"]
