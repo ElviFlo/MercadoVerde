@@ -1,14 +1,29 @@
-import { ConflictException, Inject, Injectable } from '@nestjs/common';
+// src/application/use-cases/create-category.usecase.ts
+import { Injectable, Inject } from '@nestjs/common';
 import { CategoryRepository } from '../../domain/repositories/category.repository';
+import { CreateCategoryDto } from '../../infrastructure/dtos/create-category.dto';
+import { slugify } from '../../utils/slugify';
 
 @Injectable()
 export class CreateCategoryUseCase {
-  constructor(@Inject('CategoryRepository') private repo: CategoryRepository) {}
+  constructor(
+    @Inject('CategoryRepository')
+    private readonly categoryRepo: CategoryRepository,
+  ) {}
 
-  async execute(input: { name: string; slug?: string; parentId?: string | null; active?: boolean }) {
-    const slug = (input.slug ?? input.name).trim().toLowerCase().replace(/\s+/g, '-');
-    const exists = await this.repo.findBySlug(slug);
-    if (exists) throw new ConflictException('Slug already exists');
-    return this.repo.create({ name: input.name, slug, parentId: input.parentId ?? null, active: input.active ?? true });
+  async execute(dto: CreateCategoryDto) {
+    const slug = dto.slug ?? slugify(dto.name);
+    const parentId = dto.parentId ?? null;
+
+    const newCategory = {
+      name: dto.name,
+      slug,
+      parentId,
+      active: dto.active ?? true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    return this.categoryRepo.create(newCategory);
   }
 }
