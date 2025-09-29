@@ -1,5 +1,6 @@
-import { IOrderRepository } from '../../domain/repositories/order.repository';
-import { Order } from '../../domain/entities/order.entity';
+// Services/orders/src/infrastructure/repositories/order.repository.impl.ts
+import { IOrderRepository } from "../../domain/repositories/order.repository";
+import { Order } from "../../domain/entities/order.entity";
 
 export class InMemoryOrderRepository implements IOrderRepository {
   private data = new Map<string, Order>();
@@ -18,9 +19,7 @@ export class InMemoryOrderRepository implements IOrderRepository {
   }
 
   async update(order: Order): Promise<Order> {
-    if (!this.data.has(order.id)) {
-      throw new Error('Order not found');
-    }
+    if (!this.data.has(order.id)) throw new Error("Order not found");
     this.data.set(order.id, order);
     return order;
   }
@@ -29,3 +28,6 @@ export class InMemoryOrderRepository implements IOrderRepository {
     this.data.delete(id);
   }
 }
+
+// 👇 instancia reutilizable
+export const orderRepository = new InMemoryOrderRepository();

@@ -12,21 +12,39 @@ export const orderSwagger = {
       bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
     },
     schemas: {
+      Customer: {
+        type: "object",
+        required: ["name", "email"],
+        properties: {
+          name: { type: "string", example: "Ricardo Pérez" },
+          email: { type: "string", format: "email", example: "ricardo@example.com" },
+        },
+      },
       OrderItem: {
         type: "object",
+        required: ["productId", "name", "price", "quantity"],
         properties: {
-          productId: { type: "string", example: "a6cae558-f19f-4678-ac85-ad689aad3de9" },
+          productId: {
+            type: "string",
+            example: "a6cae558-f19f-4678-ac85-ad689aad3de9",
+            description: "ID del producto (proveniente del microservicio de products)",
+          },
           name: { type: "string", example: "Café orgánico" },
           price: { type: "number", example: 15000 },
-          quantity: { type: "integer", example: 1 },
+          quantity: { type: "integer", example: 1, minimum: 1 },
         },
-        required: ["productId", "name", "price", "quantity"],
       },
       Order: {
         type: "object",
+        required: ["id", "status", "customer", "items", "total"],
         properties: {
           id: { type: "string", example: "f7c8a8d2-9ac0-4f78-8df1-3b0c3f6a8a77" },
-          status: { type: "string", enum: ["PENDING", "PAID", "CANCELLED"], example: "PENDING" },
+          status: {
+            type: "string",
+            enum: ["PENDING", "PAID", "CANCELLED"],
+            example: "PENDING",
+          },
+          customer: { $ref: "#/components/schemas/Customer" },
           items: {
             type: "array",
             items: { $ref: "#/components/schemas/OrderItem" },
@@ -35,30 +53,42 @@ export const orderSwagger = {
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
         },
-        required: ["id", "status", "items", "total"],
       },
       CreateOrderRequest: {
         type: "object",
+        required: ["customer", "items"],
         properties: {
+          customer: { $ref: "#/components/schemas/Customer" },
           items: {
             type: "array",
             items: { $ref: "#/components/schemas/OrderItem" },
+            minItems: 1,
           },
         },
-        required: ["items"],
+        example: {
+          customer: { name: "Ricardo Pérez", email: "ricardo@example.com" },
+          items: [
+            {
+              productId: "a6cae558-f19f-4678-ac85-ad689aad3de9",
+              name: "Café orgánico",
+              price: 15000,
+              quantity: 1,
+            },
+          ],
+        },
       },
       UpdateStatusRequest: {
         type: "object",
+        required: ["status"],
         properties: {
           status: { type: "string", enum: ["PENDING", "PAID", "CANCELLED"] },
         },
-        required: ["status"],
+        example: { status: "PAID" },
       },
       ErrorResponse: {
         type: "object",
-        properties: {
-          message: { type: "string" },
-        },
+        properties: { message: { type: "string" } },
+        example: { message: "customer name and email are required" },
       },
     },
   },
@@ -67,16 +97,14 @@ export const orderSwagger = {
     "/orders": {
       get: {
         summary: "Obtener todas las órdenes",
+        tags: ["Orders"],
         security: [{ bearerAuth: [] }],
         responses: {
           200: {
             description: "Lista de órdenes",
             content: {
               "application/json": {
-                schema: {
-                  type: "array",
-                  items: { $ref: "#/components/schemas/Order" },
-                },
+                schema: { type: "array", items: { $ref: "#/components/schemas/Order" } },
               },
             },
           },
@@ -85,6 +113,7 @@ export const orderSwagger = {
       },
       post: {
         summary: "Crear una nueva orden",
+        tags: ["Orders"],
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -103,7 +132,14 @@ export const orderSwagger = {
               },
             },
           },
-          400: { description: "Error en la petición" },
+          400: {
+            description: "Error en la petición",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
           401: { description: "No autorizado" },
         },
       },
@@ -111,6 +147,7 @@ export const orderSwagger = {
     "/orders/{id}": {
       get: {
         summary: "Obtener una orden por ID",
+        tags: ["Orders"],
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: "id", in: "path", required: true, schema: { type: "string" } },
@@ -119,9 +156,7 @@ export const orderSwagger = {
           200: {
             description: "Orden encontrada",
             content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/Order" },
-              },
+              "application/json": { schema: { $ref: "#/components/schemas/Order" } },
             },
           },
           404: { description: "No encontrada" },
@@ -130,6 +165,7 @@ export const orderSwagger = {
       },
       delete: {
         summary: "Eliminar una orden por ID",
+        tags: ["Orders"],
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: "id", in: "path", required: true, schema: { type: "string" } },
@@ -144,6 +180,7 @@ export const orderSwagger = {
     "/orders/{id}/status": {
       put: {
         summary: "Actualizar estado de una orden",
+        tags: ["Orders"],
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: "id", in: "path", required: true, schema: { type: "string" } },
@@ -151,7 +188,9 @@ export const orderSwagger = {
         requestBody: {
           required: true,
           content: {
-            "application/json": { schema: { $ref: "#/components/schemas/UpdateStatusRequest" } },
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdateStatusRequest" },
+            },
           },
         },
         responses: {
@@ -163,7 +202,14 @@ export const orderSwagger = {
               },
             },
           },
-          400: { description: "Error en la petición" },
+          400: {
+            description: "Error en la petición",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
           404: { description: "No encontrada" },
           401: { description: "No autorizado" },
         },

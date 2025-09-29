@@ -1,97 +1,58 @@
-import { Request, Response, Router } from "express";
-import { InMemoryProductRepository } from "../repositories/product.repository.impl";
+// Services/products/src/infrastructure/controllers/productController.ts
+import { Request, Response } from "express";
+import { ProductRepository } from "../../domain/repositories/IProductRepository";
 import { CreateProduct } from "../../application/use-cases/CreateProduct";
 import { GetAllProducts } from "../../application/use-cases/GetAllProducts";
 import { GetProductById } from "../../application/use-cases/GetProductById";
 import { UpdateProduct } from "../../application/use-cases/UpdateProduct";
 import { DeleteProduct } from "../../application/use-cases/DeleteProduct";
-import { authenticateToken } from "../middlewares/AuthMiddleware";
 
+// Instanciamos el repo en memoria (puedes cambiarlo luego a Postgres)
+const repo = new ProductRepository();
+const createUC = new CreateProduct(repo);
+const getAllUC = new GetAllProducts(repo);
+const getByIdUC = new GetProductById(repo);
+const updateUC = new UpdateProduct(repo);
+const deleteUC = new DeleteProduct(repo);
 
-
-// Repo + casos de uso
-const repo = new InMemoryProductRepository();
-const createProduct = new CreateProduct(repo);
-const getAllProducts = new GetAllProducts(repo);
-const getByIdUseCase = new GetProductById(repo);
-const updateProduct = new UpdateProduct(repo);
-const deleteProduct = new DeleteProduct(repo);
-
-/** Helper: extrae el userId del payload del JWT */
-function getUserIdFromReq(req: Request): string | undefined {
-  const u: any = (req as any).user;
-  return u?.sub ?? u?.id ?? u?.userId ?? u?.username; // adapta a tu payload real
+export async function create(req: Request, res: Response) {
+  try {
+    const product = await createUC.execute(req.body);
+    res.status(201).json(product);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
 }
 
+export async function getAll(_req: Request, res: Response) {
+  const products = await getAllUC.execute();
+  res.json(products);
+}
 
-
-export const create = async (req: Request, res: Response) => {
+export async function getById(req: Request, res: Response) {
   try {
-    const { name, description, price } = req.body ?? {};
-    if (!name || price === undefined || price === null || isNaN(Number(price))) {
-      return res.status(400).json({ message: "name y price son requeridos (price debe ser numérico)" });
-    }
-    const createdBy = getUserIdFromReq(req) ?? "unknown";
-    const dto = {
-      name: String(name).trim(),
-      description: description != null ? String(description) : undefined,
-      price: Number(price),
-      createdBy,
-    };
-    const product = await createProduct.execute(dto);
-    return res.status(201).json(product);
+    const product = await getByIdUC.execute(req.params.id);
+    res.json(product);
   } catch (err: any) {
-    return res.status(400).json({ message: err?.message || "Bad request" });
+    res.status(404).json({ message: err.message });
   }
-};
+}
 
-export const getAll = async (_req: Request, res: Response) => {
-  const products = await getAllProducts.execute();
-  return res.json(products);
-};
-
-export const getById = async (req: Request, res: Response) => {
+export async function update(req: Request, res: Response) {
   try {
-    const product = await getByIdUseCase.execute(req.params.id);
-    if (!product) return res.status(404).json({ message: "Producto no encontrado" });
-    return res.json(product);
+    const dto = { id: req.params.id, ...req.body };
+    const product = await updateUC.execute(dto);
+    res.json(product);
   } catch (err: any) {
-    return res.status(404).json({ message: err?.message || "Producto no encontrado" });
+    res.status(400).json({ message: err.message });
   }
-};
+}
 
-export const update = async (req: Request, res: Response) => {
+export async function remove(req: Request, res: Response) {
   try {
-    const { name, description, price } = req.body ?? {};
-    const dto: any = { id: req.params.id };
-    if (name !== undefined) dto.name = String(name).trim();
-    if (description !== undefined) dto.description = description != null ? String(description) : null;
-    if (price !== undefined) {
-      if (isNaN(Number(price))) {
-        return res.status(400).json({ message: "price debe ser numérico" });
-      }
-      dto.price = Number(price);
-    }
-    const product = await updateProduct.execute(dto);
-    if (!product) return res.status(404).json({ message: "Producto no encontrado" });
-    return res.json(product);
+    await deleteUC.execute(req.params.id);
+    res.status(204).send();
   } catch (err: any) {
-    return res.status(400).json({ message: err?.message || "Bad request" });
+    res.status(404).json({ message: err.message });
   }
-};
-
-export const remove = async (req: Request, res: Response) => {
-  try {
-    await deleteProduct.execute(req.params.id);
-    return res.status(204).send();
-  } catch (err: any) {
-    return res.status(404).json({ message: err?.message || "Producto no encontrado" });
-  }
-};
-/** Crear producto (requiere token) */
-/** Listar todos (público o protégelo si quieres) */
-/** Obtener por id (público o protégelo si quieres) */
-/** Actualizar (requiere token) */
-/** Eliminar (requiere token) */
-
-
+}
