@@ -4,9 +4,10 @@
   "description": "Microservicio Kora (canal de voz) - MercadoVerde",
   "main": "dist/main.js",
   "scripts": {
-    "dev": "ts-node src/main.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
+    "start:dev": "nest start --watch",
+    "dev": "npm run start:dev",
     "lint": "eslint . --ext .ts"
   },
   "dependencies": {
