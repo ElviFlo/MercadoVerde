@@ -1,11 +1,16 @@
+// src/application/use-cases/remove-from-cart.use-case.ts
 import { Inject, Injectable } from '@nestjs/common';
-import { CartRepository } from '../../infrastructure/repositories/cart.repository';
+import {
+  CART_REPO,
+  CartRepository,
+} from '../../infrastructure/repositories/cart.repository';
 
 @Injectable()
 export class RemoveFromCartUseCase {
-  constructor(@Inject('CartRepository') private readonly repo: CartRepository) {}
+  constructor(@Inject(CART_REPO) private readonly repo: CartRepository) {}
 
-  execute(input: { userId: string; productId: string }): Promise<void> {
-    return this.repo.removeItem(input.userId, input.productId);
+  async execute(input: { userId: string; productId: string }) {
+    await this.repo.removeItem(input.userId, input.productId);
+    return this.repo.getByUser(input.userId);
   }
 }

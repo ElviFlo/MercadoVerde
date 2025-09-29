@@ -1,3 +1,4 @@
+// src/infrastructure/controllers/cart.controller.ts
 import {
   Body,
   Controller,
@@ -9,17 +10,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiParam, ApiTags } from '@nestjs/swagger';
-
 import { AddToCartUseCase } from '../../application/use-cases/add-to-cart.use-case';
 import { GetCartUseCase } from '../../application/use-cases/get-cart.use-case';
 import { RemoveFromCartUseCase } from '../../application/use-cases/remove-from-cart.use-case';
-
 import { AddToCartDto } from '../dto/add-to-cart.dto';
-import { RemoveFromCartDto } from '../dto/remove-from-cart.dto';
-
-// src/infrastructure/controllers/cart.controller.ts
 import { JwtAuthGuard } from '../auth/jwt.middleware';
-;
 
 @ApiTags('cart')
 @ApiBearerAuth()
@@ -41,25 +36,26 @@ export class CartController {
   @Post('items')
   addItem(@Req() req: any, @Body() dto: AddToCartDto) {
     const userId: string = req.user?.sub ?? req.user?.id;
+    const authHeader = req.headers['authorization'] as string | undefined;
     return this.addUC.execute({
       userId,
-      productId: dto.productId, // UUID string
+      productId: dto.productId,
       quantity: dto.quantity,
-      price: dto.price,
+      authHeader,
     });
   }
 
   @Delete('items')
-  removeItemByBody(@Req() req: any, @Body() dto: RemoveFromCartDto) {
+  removeItemByBody(@Req() req: any, @Body() body: { productId: string }) {
     const userId: string = req.user?.sub ?? req.user?.id;
-    return this.removeUC.execute({ userId, productId: dto.productId });
+    return this.removeUC.execute({ userId, productId: body.productId });
   }
 
   @Delete('items/:productId')
   @ApiParam({
     name: 'productId',
     description: 'UUID del producto',
-    example: 'a3f1bc00-9e5a-4d3b-84d4-7a1f3d0a7f3a',
+    example: '07f8a883-a691-4829-b671-ac8845a72961',
   })
   removeItemByParam(@Req() req: any, @Param('productId') productId: string) {
     const userId: string = req.user?.sub ?? req.user?.id;
@@ -69,10 +65,11 @@ export class CartController {
   @Delete('clear')
   async clear(@Req() req: any) {
     const userId: string = req.user?.sub ?? req.user?.id;
+    // Si luego creas ClearCartUseCase cámbialo aquí:
     const items = await this.getUC.execute(userId);
     for (const it of items) {
       await this.removeUC.execute({ userId, productId: it.productId });
     }
-    return { ok: true, cleared: items.length };
+    return { ok: true };
   }
 }
