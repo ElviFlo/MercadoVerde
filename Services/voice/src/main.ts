@@ -11,7 +11,7 @@ app.use("/kora", koraRoutes);
 
 app.get("/", (_req, res) => res.send("Kora service OK"));
 
-const PORT = Number(process.env.PORT || 3004);
+const PORT = Number(process.env.PORT || 3006);
 app.listen(PORT, () => {
   console.log(`Kora running on port ${PORT}`);
 });
