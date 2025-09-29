@@ -1,5 +1,11 @@
 import { Schema, model } from "mongoose";
-import { Category } from "../../domain/Category";
+
+// Category interface
+interface Category {
+  nombre: string;
+  descripcion?: string;
+  id?: string;
+}
 
 const CategorySchema = new Schema<Category>({
   nombre: { type: String, required: true, unique: true },

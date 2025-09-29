@@ -1,4 +1,4 @@
-import CategoryModel from "../../infrastructure/models/CategoryModel";
+import CategoryModel from "../../infrastructure/CategoryModel";
 
 export class GetCategoryById {
   async execute(id: string) {
