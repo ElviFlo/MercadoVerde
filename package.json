@@ -5,7 +5,8 @@
     "start:dev": "nest start --watch",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "bootstrap": "node scripts/install-all.mjs"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",
