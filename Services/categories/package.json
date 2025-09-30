@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "MercadoVerde - Categories API (NestJS, JWT, Swagger, Docker) - no Prisma",
   "main": "dist/main.js",
+  
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
@@ -10,6 +11,7 @@
     "start:dev": "ts-node-dev --respawn --transpile-only src/main.ts",
     "dev": "npm run start:dev",
     "lint": "eslint . --ext .ts"
+    
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
@@ -31,9 +33,9 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.11.0",
     "@types/swagger-ui-express": "^4.1.8",
+    "prisma": "^6.16.2",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.4.0",
-    "prisma": "^6.16.2"
+    "typescript": "^5.4.0"
   }
 }

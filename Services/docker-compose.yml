@@ -1,31 +1,145 @@
+version: "3.9"
+
+networks:
+  mv_net:
+
+volumes:
+  pgdata-auth:
+  pgdata-products:
+  pgdata-orders:
+  pgdata-cart:
+  pgdata-categories:
+  pgdata-voice:
+
 services:
-  # ========================
-  # Microservicios
-  # ========================
+  # ---------- POSTGRES POR SERVICIO ----------
+  postgres-auth:
+    image: postgres:16-alpine
+    container_name: mv_postgres_auth
+    environment:
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_pass
+      POSTGRES_DB: auth_db
+    ports: ["5433:5432"]       # opcional, solo para conectar desde host
+    volumes:
+      - pgdata-auth:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [mv_net]
+
+  postgres-products:
+    image: postgres:16-alpine
+    container_name: mv_postgres_products
+    environment:
+      POSTGRES_USER: products_user
+      POSTGRES_PASSWORD: products_pass
+      POSTGRES_DB: products_db
+    ports: ["5434:5432"]
+    volumes:
+      - pgdata-products:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U products_user -d products_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [mv_net]
+
+  postgres-orders:
+    image: postgres:16-alpine
+    container_name: mv_postgres_orders
+    environment:
+      POSTGRES_USER: orders_user
+      POSTGRES_PASSWORD: orders_pass
+      POSTGRES_DB: orders_db
+    ports: ["5435:5432"]
+    volumes:
+      - pgdata-orders:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orders_user -d orders_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [mv_net]
+
+  postgres-cart:
+    image: postgres:16-alpine
+    container_name: mv_postgres_cart
+    environment:
+      POSTGRES_USER: cart_user
+      POSTGRES_PASSWORD: cart_pass
+      POSTGRES_DB: cart_db
+    ports: ["5436:5432"]
+    volumes:
+      - pgdata-cart:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cart_user -d cart_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [mv_net]
+
+  postgres-categories:
+    image: postgres:16-alpine
+    container_name: mv_postgres_categories
+    environment:
+      POSTGRES_USER: categories_user
+      POSTGRES_PASSWORD: categories_pass
+      POSTGRES_DB: categories_db
+    ports: ["5437:5432"]
+    volumes:
+      - pgdata-categories:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U categories_user -d categories_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [mv_net]
+
+  postgres-voice:
+    image: postgres:16-alpine
+    container_name: mv_postgres_voice
+    environment:
+      POSTGRES_USER: voice_user
+      POSTGRES_PASSWORD: voice_pass
+      POSTGRES_DB: voice_db
+    ports: ["5438:5432"]
+    volumes:
+      - pgdata-voice:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U voice_user -d voice_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [mv_net]
+
+  # ---------- SERVICIOS NEST ----------
   auth:
     build: ./auth
     container_name: auth_service
     env_file:
       - ./auth/.env
-    ports:
-      - "3001:3000"
+    ports: ["3001:3001"]
     depends_on:
       postgres-auth:
         condition: service_healthy
+    # Si tu imagen no trae curl/wget, instala uno o cambia este healthcheck
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:3000/health || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 10
     restart: unless-stopped
+    networks: [mv_net]
 
   products:
     build: ./products
     container_name: products_service
     env_file:
       - ./products/.env
-    ports:
-      - "3003:3000"
+    ports: ["3003:3003"]
     depends_on:
       postgres-products:
         condition: service_healthy
@@ -37,14 +151,14 @@ services:
       timeout: 3s
       retries: 10
     restart: unless-stopped
+    networks: [mv_net]
 
   orders:
     build: ./orders
     container_name: orders_service
     env_file:
       - ./orders/.env
-    ports:
-      - "3002:3000"
+    ports: ["3002:3002"]
     depends_on:
       postgres-orders:
         condition: service_healthy
@@ -56,14 +170,14 @@ services:
       timeout: 3s
       retries: 10
     restart: unless-stopped
+    networks: [mv_net]
 
   cart:
     build: ./cart
     container_name: cart_service
     env_file:
       - ./cart/.env
-    ports:
-      - "3005:3000"
+    ports: ["3005:3005"]
     depends_on:
       postgres-cart:
         condition: service_healthy
@@ -75,14 +189,14 @@ services:
       timeout: 3s
       retries: 10
     restart: unless-stopped
+    networks: [mv_net]
 
   categories:
     build: ./categories
     container_name: categories_service
     env_file:
       - ./categories/.env
-    ports:
-      - "3004:3000"
+    ports: ["3004:3004"]
     depends_on:
       postgres-categories:
         condition: service_healthy
@@ -94,113 +208,16 @@ services:
       timeout: 3s
       retries: 10
     restart: unless-stopped
+    networks: [mv_net]
 
   voice:
     build: ./voice
     container_name: voice_service
     env_file:
       - ./voice/.env
-    ports:
-      - "3006:3000"
+    ports: ["3006:3006"]
     depends_on:
       postgres-voice:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/health || exit 1"]
-      interval: 10s
-      timeout: 3s
-      retries: 10
     restart: unless-stopped
-
-  # ========================
-  # Bases de datos Postgres
-  # ========================
-  postgres-auth:
-    image: postgres:16-alpine
-    container_name: mv_postgres_auth
-    environment:
-      POSTGRES_USER: auth_user
-      POSTGRES_PASSWORD: auth_pass
-      POSTGRES_DB: auth_db
-    ports:
-      - "5433:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-  postgres-products:
-    image: postgres:16-alpine
-    container_name: mv_postgres_products
-    environment:
-      POSTGRES_USER: products_user
-      POSTGRES_PASSWORD: products_pass
-      POSTGRES_DB: products_db
-    ports:
-      - "5434:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U products_user -d products_db"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-  postgres-orders:
-    image: postgres:16-alpine
-    container_name: mv_postgres_orders
-    environment:
-      POSTGRES_USER: orders_user
-      POSTGRES_PASSWORD: orders_pass
-      POSTGRES_DB: orders_db
-    ports:
-      - "5435:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U orders_user -d orders_db"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-  postgres-cart:
-    image: postgres:16-alpine
-    container_name: mv_postgres_cart
-    environment:
-      POSTGRES_USER: cart_user
-      POSTGRES_PASSWORD: cart_pass
-      POSTGRES_DB: cart_db
-    ports:
-      - "5436:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cart_user -d cart_db"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-  postgres-categories:
-    image: postgres:16-alpine
-    container_name: mv_postgres_categories
-    environment:
-      POSTGRES_USER: categories_user
-      POSTGRES_PASSWORD: categories_pass
-      POSTGRES_DB: categories_db
-    ports:
-      - "5437:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U categories_user -d categories_db"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-  postgres-voice:
-    image: postgres:16-alpine
-    container_name: mv_postgres_voice
-    environment:
-      POSTGRES_USER: voice_user
-      POSTGRES_PASSWORD: voice_pass
-      POSTGRES_DB: voice_db
-    ports:
-      - "5438:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U voice_user -d voice_db"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+    networks: [mv_net]
