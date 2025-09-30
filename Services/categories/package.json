@@ -5,8 +5,10 @@
   "main": "dist/main.js",
   "scripts": {
     "start": "node dist/main.js",
+    "start:prod": "node dist/main.js",
     "build": "tsc -p tsconfig.json",
-    "start:dev": "ts-node-dev --respawn --transpile-only src/main.ts"
+    "start:dev": "ts-node-dev --respawn --transpile-only src/main.ts",
+    "dev": "npm run start:dev"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
