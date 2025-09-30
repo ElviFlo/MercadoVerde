@@ -1,14 +1,15 @@
+// src/application/use-cases/get-cart.use-case.ts
 import { Inject, Injectable } from '@nestjs/common';
-import { CartRepository } from '../../infrastructure/repositories/cart.repository';
-import { CartItem } from '../../domain/entities/cart-item.entity';
+import {
+  CART_REPO,
+  CartRepository,
+} from '../../infrastructure/repositories/cart.repository';
 
 @Injectable()
 export class GetCartUseCase {
-  constructor(
-    @Inject('CartRepository') private readonly repo: CartRepository,
-  ) {}
+  constructor(@Inject(CART_REPO) private readonly repo: CartRepository) {}
 
-  execute(userId: string): Promise<CartItem[]> {
-    return this.repo.getItems(userId);
+  execute(userId: string) {
+    return this.repo.getByUser(userId);
   }
 }
