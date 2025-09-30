@@ -1,29 +1,38 @@
-# ---------- builder ----------
+# Usa Node.js LTS (20)
 FROM node:20-alpine AS builder
-WORKDIR /usr/src/app
 
-# deps
+# Instalar dependencias necesarias del sistema
+RUN apk add --no-cache bash curl
+
+# Directorio de trabajo
+WORKDIR /app
+
+# Copiar manifests primero
 COPY package*.json ./
-RUN npm ci
 
-# build
-COPY tsconfig*.json ./
-COPY src ./src
+# Instalar dependencias
+RUN npm install
+
+# Copiar el resto del código
+COPY . .
+
+# Compilar el proyecto
 RUN npm run build
 
-# ---------- runtime ----------
+# ======================
+# Etapa final (runtime)
+# ======================
 FROM node:20-alpine
-WORKDIR /usr/src/app
-ENV NODE_ENV=production
 
-# para healthcheck
-RUN apk add --no-cache curl wget
+WORKDIR /app
 
+# Copiar dependencias desde builder
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
 COPY package*.json ./
-RUN npm ci --omit=dev
 
-# solo el build final
-COPY --from=builder /usr/src/app/dist ./dist
+# Exponer el puerto (ajústalo según cada servicio en docker-compose)
+EXPOSE 3000
 
-EXPOSE 3002
+# Comando de arranque
 CMD ["node", "dist/main.js"]

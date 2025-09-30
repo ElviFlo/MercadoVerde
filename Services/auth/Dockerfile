@@ -1,32 +1,38 @@
-# ===== Etapa 1: build =====
+# Usa Node.js LTS (20)
 FROM node:20-alpine AS builder
 
-WORKDIR /usr/src/app
+# Instalar dependencias necesarias del sistema
+RUN apk add --no-cache bash curl
 
-# 1) Instala deps con lockfile para builds reproducibles
+# Directorio de trabajo
+WORKDIR /app
+
+# Copiar manifests primero
 COPY package*.json ./
-# Si NO tienes package-lock.json, cambia a: RUN npm install
-RUN npm ci
 
-# 2) Copia el código y compila a dist/
+# Instalar dependencias
+RUN npm install
+
+# Copiar el resto del código
 COPY . .
+
+# Compilar el proyecto
 RUN npm run build
 
-
-# ===== Etapa 2: runtime =====
+# ======================
+# Etapa final (runtime)
+# ======================
 FROM node:20-alpine
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
-# 3) Copia solo lo necesario para correr
-COPY --from=builder /usr/src/app/package*.json ./
-# Instala solo deps de producción; si no tienes package-lock, usa: npm install --omit=dev
-RUN npm ci --omit=dev
+# Copiar dependencias desde builder
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY package*.json ./
 
-# 4) Copia el build
-COPY --from=builder /usr/src/app/dist ./dist
+# Exponer el puerto (ajústalo según cada servicio en docker-compose)
+EXPOSE 3000
 
-ENV NODE_ENV=production
-EXPOSE 3001
-
+# Comando de arranque
 CMD ["node", "dist/main.js"]
