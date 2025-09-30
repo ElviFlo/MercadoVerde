@@ -1,6 +1,8 @@
-import { User } from "../entities/User";
+import { User, UserRole } from "../entities/User";
 
 export interface IUserRepository {
-  findByUsername(username: string): Promise<User | null>;
-  create(user: User): Promise<User>;
+  findByEmail(email: string): Promise<User | null>;
+  findByName(name: string): Promise<User | null>;
+  create(user: User): Promise<void>;
+  updateRole(userId: number, role: UserRole): Promise<void>;
 }

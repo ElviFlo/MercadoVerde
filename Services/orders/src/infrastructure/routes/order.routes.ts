@@ -1,13 +1,27 @@
-// Services/orders/src/infrastructure/routes/order.routes.ts
 import { Router } from "express";
-import { OrderController } from "../controllers/order.controller";
+import { OrdersController } from "../controllers/order.controller";
+import {
+  verifyAccessToken,
+  requireAdmin,
+  requireClient,
+  requireAdminOrOwner,
+} from "../middlewares/auth.middleware";
 
 const router = Router();
 
-router.get("/orders", OrderController.getAll);
-router.get("/orders/:id", OrderController.getById);
-router.post("/orders", OrderController.create);
-router.put("/orders/:id/status", OrderController.updateStatus);
-router.delete("/orders/:id", OrderController.delete);
+router.post("/", verifyAccessToken, requireClient, OrdersController.create);
+router.get(
+  "/mine",
+  verifyAccessToken,
+  requireClient,
+  OrdersController.listMine,
+);
+router.get("/", verifyAccessToken, requireAdmin, OrdersController.listAll);
+router.get(
+  "/:id",
+  verifyAccessToken,
+  requireAdminOrOwner(),
+  OrdersController.getById,
+);
 
 export default router;

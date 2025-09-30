@@ -1,3 +1,5 @@
+// Services/orders/prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,11 +9,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  ADMIN
+  CLIENT
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
   password  String
   name      String
+  role      Role     @default(CLIENT)
   carts     Cart[]
   orders    Order[]
   createdAt DateTime @default(now())
@@ -61,8 +69,10 @@ model Order {
   userId    Int
   user      User        @relation(fields: [userId], references: [id])
   items     OrderItem[]
-  status    String      @default("PAID")
+  status    String      @default("PENDING") // antes estaba "PAID"
   createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt // recomendado para auditoría
+  // total   Float        @default(0)         // opcional, puedes calcularlo al vuelo o descomentar si quieres persistirlo
 }
 
 model OrderItem {

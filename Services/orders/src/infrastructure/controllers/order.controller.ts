@@ -1,83 +1,58 @@
 import { Request, Response } from "express";
-import { GetAllOrdersUseCase } from "../../application/use-cases/get-orders.use-case";
-import { GetOrderByIdUseCase } from "../../application/use-cases/get-order-by-id.use-case";
-import { CreateOrderUseCase } from "../../application/use-cases/create-order.use-case";
-import { UpdateOrderStatusUseCase } from "../../application/use-cases/update-order-status.use-case";
-import { DeleteOrderUseCase } from "../../application/use-cases/delete-order.use-case";
-import { orderRepository } from "../repositories/order.repository.impl";
-import { OrderStatus } from "../../domain/entities/order.entity";
+import { OrderRepository } from "../repositories/order.repository";
 
-// Instancias de casos de uso
-const getAllUC  = new GetAllOrdersUseCase(orderRepository);
-const getByIdUC = new GetOrderByIdUseCase(orderRepository);
-const createUC  = new CreateOrderUseCase(orderRepository);
-const updateUC  = new UpdateOrderStatusUseCase(orderRepository);
-const deleteUC  = new DeleteOrderUseCase(orderRepository);
+const repo = new OrderRepository();
 
-export const OrderController = {
-  async getAll(_req: Request, res: Response) {
-    try {
-      const orders = await getAllUC.execute();
-      return res.json(orders);
-    } catch (err: any) {
-      return res.status(err?.status || 500).json({ message: err?.message || "Internal Server Error" });
-    }
-  },
-
-  async getById(req: Request, res: Response) {
-    try {
-      const { id } = req.params;
-      const order = await getByIdUC.execute(id);
-      if (!order) return res.status(404).json({ message: "Order not found" });
-      return res.json(order);
-    } catch (err: any) {
-      return res.status(err?.status || 500).json({ message: err?.message || "Internal Server Error" });
-    }
-  },
-
+export const OrdersController = {
+  // CLIENT: crear orden
   async create(req: Request, res: Response) {
     try {
-      // Validaciones rápidas (útiles para mejores mensajes)
-      const { customer, items } = req.body || {};
-      if (!customer?.name || !customer?.email) {
-        return res.status(400).json({ message: "customer name and email are required" });
-      }
+      const u = req.user!;
+      const userId = Number(u.sub);
+      const items = req.body?.items as {
+        productId: number;
+        quantity: number;
+      }[];
       if (!Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({ message: "items must be a non-empty array" });
+        return res.status(400).json({ message: "items[] requerido" });
       }
-
-      const created = await createUC.execute(req.body);
-      return res.status(201).json(created);
-    } catch (err: any) {
-      return res.status(err?.status || 500).json({ message: err?.message || "Internal Server Error" });
+      const order = await repo.createFromItems(userId, items);
+      return res.status(201).json(order);
+    } catch (e: any) {
+      return res
+        .status(400)
+        .json({ message: e?.message ?? "No se pudo crear la orden" });
     }
   },
 
-  async updateStatus(req: Request, res: Response) {
-    try {
-      const { id } = req.params;
-      const { status } = req.body as { status: OrderStatus };
-
-      const allowed: OrderStatus[] = ["PENDING", "PAID", "CANCELLED"];
-      if (!allowed.includes(status)) {
-        return res.status(400).json({ message: "status must be one of PENDING | PAID | CANCELLED" });
-      }
-
-      // Firma del use case: execute(id: string, status: OrderStatus)
-      const updated = await updateUC.execute(id, status);
-      return res.json(updated);
-    } catch (err: any) {
-      return res.status(err?.status || 500).json({ message: err?.message || "Internal Server Error" });
-    }
+  // ADMIN: listar todas
+  async listAll(_req: Request, res: Response) {
+    const orders = await repo.listAll();
+    return res.json(orders);
   },
 
-  async delete(req: Request, res: Response) {
-    try {
-      const { id } = req.params;
-      await deleteUC.execute(id);
-      return res.status(204).send();
-    } catch (err: any) {
-      return res.status(err?.status || 500).json({ message: err?.message || "Internal Server Error" });
-    }
+  // CLIENT: listar mis órdenes
+  async listMine(req: Request, res: Response) {
+    const u = req.user!;
+    const orders = await repo.listByUser(Number(u.sub));
+    return res.json(orders);
+  },
+
+  // ADMIN o DUEÑO: detalle
+  async getById(req: Request, res: Response) {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id))
+      return res.status(400).json({ message: "id inválido" });
+
+    const order = await repo.getById(id);
+    if (!order) return res.status(404).json({ message: "No encontrada" });
+
+    const u = req.user!;
+    const isAdmin = u.role === "admin";
+    const isOwner = String(order.userId) === String(u.sub);
+    if (!isAdmin && !isOwner)
+      return res.status(403).json({ message: "No autorizado" });
+
+    return res.json(order);
   },
 };

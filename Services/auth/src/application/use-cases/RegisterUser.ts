@@ -1,18 +1,42 @@
+// auth/src/application/use-cases/RegisterUser.ts
+import * as bcrypt from "bcrypt";
 import { IUserRepository } from "../../domain/repositories/IUserRepository";
 import { User } from "../../domain/entities/User";
-import * as bcrypt from "bcrypt";
+
+type RegisterInput = {
+  name: string;
+  email: string;
+  password: string;
+};
 
 export class RegisterUser {
-  constructor(private userRepository: IUserRepository) {}
+  constructor(private readonly userRepository: IUserRepository) {}
 
-  async execute(username: string, email: string, password: string): Promise<User> {
-    const existing = await this.userRepository.findByUsername(username);
-    if (existing) {
-      throw new Error("Usuario ya existe");
+  /**
+   * Registra un usuario con rol 'client' por defecto.
+   * - Enforce: email único
+   * - Hash de contraseña
+   */
+  async execute(name: string, email: string, password: string): Promise<void> {
+    // 1) Unicidad por email
+    const existingByEmail = await this.userRepository.findByEmail(email);
+    if (existingByEmail) {
+      throw new Error("El email ya está registrado");
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User(Date.now().toString(), username, hashedPassword, email);
-    return await this.userRepository.create(user);
+    // 2) Hash de contraseña
+    const hashed = await bcrypt.hash(password, 10);
+
+    // 3) Crear entidad (rol = client)
+    const user = new User(
+      0, // id lo asigna DB (autoincrement)
+      name.trim(),
+      email.trim().toLowerCase(),
+      hashed,
+      "client", // 👈 siempre cliente en el registro
+    );
+
+    // 4) Persistir
+    await this.userRepository.create(user);
   }
 }
