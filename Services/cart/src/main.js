@@ -61,7 +61,7 @@ function bootstrap() {
                         .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
                         .build();
                     document = swagger_1.SwaggerModule.createDocument(app, config);
-                    swagger_1.SwaggerModule.setup('api-docs', app, document);
+                    swagger_1.SwaggerModule.setup('docs', app, document);
                     // /health simple
                     app.getHttpAdapter().get('/health', function (req, res) { return res.json({ ok: true, service: 'cart', timestamp: new Date().toISOString() }); });
                     // opcional: /docs.json crudo

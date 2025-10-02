@@ -37,8 +37,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 
 // Servidor
 const server = app.listen(PORT, () => {
-  console.log(`[voice] escuchando en http://0.0.0.0:${PORT}`);
-  console.log(`[voice] Swagger montado en http://localhost:${PORT}/docs`);
+  console.log(`🟢 Voice service running on http://localhost:${PORT}/docs with Swagger`);
 });
 
 // Shutdown limpio

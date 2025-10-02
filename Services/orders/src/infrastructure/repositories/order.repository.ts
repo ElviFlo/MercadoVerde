@@ -1,63 +1,71 @@
-import { PrismaClient } from "@prisma/client"; // 👈 quita OrderStatus
+// Services/orders/src/infrastructure/repositories/order.repository.ts
+import { PrismaClient } from "@prisma/client";
+import { fetchProduct } from "../services/products.client";
+
 const prisma = new PrismaClient();
 
+type OrderItemInput = { productId: string; quantity: number };
+
 export class OrderRepository {
-  async createFromItems(
-    userId: number,
-    items: { productId: number; quantity: number }[],
+  async createOrder(
+    userId: string,
+    items: OrderItemInput[],
+    authHeader?: string
   ) {
-    const ids = items.map((i) => i.productId);
-    const products = await prisma.product.findMany({
-      where: { id: { in: ids } },
-      select: { id: true, price: true },
-    });
+    // Validar y armar items con nombre y precios desde Products Service
+    // (en paralelo para acelerar)
+    const enriched = await Promise.all(
+      items.map(async (i) => {
+        const p = await fetchProduct(i.productId, authHeader);
+        if (!p?.id) throw new Error(`Producto ${i.productId} no existe`);
+        const nameSnapshot = String(p.name ?? "");
+        const unitPrice = Number(p.price ?? 0);
+        if (!(unitPrice >= 0)) throw new Error(`Precio inválido para ${i.productId}`);
+        const quantity = Number(i.quantity ?? 0);
+        if (!(quantity > 0)) throw new Error(`quantity inválido para ${i.productId}`);
+        const subtotal = unitPrice * quantity;
+        return {
+          productId: String(i.productId),
+          nameSnapshot,
+          unitPrice,
+          quantity,
+          subtotal,
+        };
+      })
+    );
 
-    const priceById = new Map(products.map((p) => [p.id, Number(p.price)]));
+    const total = enriched.reduce((acc, it) => acc + Number(it.subtotal), 0);
 
-    const orderItems = items.map((i) => {
-      const unitPrice = priceById.get(i.productId);
-      if (unitPrice == null)
-        throw new Error(`Producto ${i.productId} no existe`);
-      if (i.quantity <= 0)
-        throw new Error(`Cantidad inválida para producto ${i.productId}`);
-      return { productId: i.productId, quantity: i.quantity, price: unitPrice };
-    });
-
-    const order = await prisma.order.create({
+    return prisma.order.create({
       data: {
-        userId,
-        status: "PENDING", // 👈 string
-        items: { create: orderItems },
+        userId,                 // string (cuid/uuid)
+        status: "PENDING",
+        total,                  // Decimal en DB; Prisma acepta number
+        items: { create: enriched },
       },
-      include: { items: true },
-    });
-
-    return order;
-  }
-
-  async getById(id: number) {
-    return prisma.order.findUnique({
-      where: { id },
       include: {
         items: true,
-        user: { select: { id: true, email: true, name: true } },
       },
+    });
+  }
+
+  async getById(id: string) {
+    return prisma.order.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+  }
+
+  async getByUser(userId: string) {
+    return prisma.order.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      include: { items: true },
     });
   }
 
   async listAll() {
     return prisma.order.findMany({
-      orderBy: { createdAt: "desc" },
-      include: {
-        items: true,
-        user: { select: { id: true, email: true, name: true } },
-      },
-    });
-  }
-
-  async listByUser(userId: number) {
-    return prisma.order.findMany({
-      where: { userId },
       orderBy: { createdAt: "desc" },
       include: { items: true },
     });

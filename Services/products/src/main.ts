@@ -49,7 +49,7 @@ const server = app.listen(PORT, async () => {
   } catch {
     /* opcional */
   }
-  console.log(`[products] escuchando en http://0.0.0.0:${PORT}`);
+  console.log(`🟢 Products service running on http://localhost:${PORT}/docs/ with Swagger`);
 });
 
 // Apagado limpio

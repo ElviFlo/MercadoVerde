@@ -42,8 +42,7 @@ const server = app.listen(PORT, async () => {
   } catch (e) {
     console.error("[auth] Error asegurando admin:", e);
   }
-  console.log(`[auth] escuchando en http://0.0.0.0:${PORT}`);
-  console.log(`[auth] Swagger en http://localhost:${PORT}/docs`);
+  console.log(`🟢 Auth service running on http://localhost:${PORT}/docs with Swagger`);
 });
 
 const shutdown = (signal: string) => {
