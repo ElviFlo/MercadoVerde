@@ -3,12 +3,6 @@ import * as bcrypt from "bcrypt";
 import { IUserRepository } from "../../domain/repositories/IUserRepository";
 import { User } from "../../domain/entities/User";
 
-type RegisterInput = {
-  name: string;
-  email: string;
-  password: string;
-};
-
 export class RegisterUser {
   constructor(private readonly userRepository: IUserRepository) {}
 
@@ -27,13 +21,13 @@ export class RegisterUser {
     // 2) Hash de contraseña
     const hashed = await bcrypt.hash(password, 10);
 
-    // 3) Crear entidad (rol = client)
+    // 3) Crear entidad (rol = client). id lo asigna la DB (UUID)
     const user = new User(
-      0, // id lo asigna DB (autoincrement)
+      "", // id: string (UUID) → lo asigna la DB
       name.trim(),
       email.trim().toLowerCase(),
       hashed,
-      "client", // 👈 siempre cliente en el registro
+      "client",
     );
 
     // 4) Persistir
