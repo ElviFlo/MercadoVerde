@@ -1,3 +1,4 @@
+// src/infrastructure/clients/products.client.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
@@ -24,7 +25,7 @@ export class ProductsClient {
     }
 
     // Observable -> AxiosResponse<ProductDTO>
-    const obs = this.http.get<ProductDTO>(`${base}/products/${productId}`, cfg);
+    const obs = this.http.get<ProductDTO>(${base}/products/${productId}, cfg);
     const resp = await firstValueFrom<AxiosResponse<ProductDTO>>(obs);
 
     const data = resp.data;

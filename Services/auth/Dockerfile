@@ -1,38 +1,29 @@
-# Usa Node.js LTS (20)
+# ---------- build ----------
 FROM node:20-alpine AS builder
-
-# Instalar dependencias necesarias del sistema
-RUN apk add --no-cache bash curl
-
-# Directorio de trabajo
 WORKDIR /app
 
-# Copiar manifests primero
+# deps
 COPY package*.json ./
+RUN npm ci
 
-# Instalar dependencias
-RUN npm install
+# prisma: copiar el esquema y GENERAR el cliente (NO requiere DB)
+COPY prisma ./prisma
+RUN npx prisma generate
 
-# Copiar el resto del código
+# código y build
 COPY . .
-
-# Compilar el proyecto
 RUN npm run build
 
-# ======================
-# Etapa final (runtime)
-# ======================
+# ---------- runtime ----------
 FROM node:20-alpine
-
 WORKDIR /app
+ENV NODE_ENV=production
 
-# Copiar dependencias desde builder
+# artefactos
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
 COPY package*.json ./
 
-# Exponer el puerto (ajústalo según cada servicio en docker-compose)
-EXPOSE 3000
-
-# Comando de arranque
-CMD ["node", "dist/main.js"]
+# aplica migraciones y arranca
+CMD ["sh","-c","npx prisma migrate deploy || true; node dist/main.js"]
