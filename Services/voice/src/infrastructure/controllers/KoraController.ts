@@ -1,17 +1,29 @@
 import { Router, Request, Response } from "express";
 import { processCommand, auditRepository } from "../../application/use-cases/ProcessCommand";
+import { verifyAccessToken, requireAdmin } from "../middlewares/auth.middleware";
 
 const router = Router();
 
 /**
- * POST /kora/command
+ * POST /voice/command
+ * Acceso: client o admin (JWT)
  * body: { text: string, userId?: string, confidence?: number, source?: string }
  */
-router.post("/command", async (req: Request, res: Response) => {
-  const { text, userId, confidence, source } = req.body ?? {};
-  if (!text || typeof text !== "string") return res.status(400).json({ message: "Se requiere 'text' con la transcripción." });
+router.post("/command", verifyAccessToken, async (req: Request, res: Response) => {
+  const { text, confidence, source } = req.body ?? {};
+  if (!text || typeof text !== "string") {
+    return res.status(400).json({ message: "Se requiere 'text' con la transcripción." });
+  }
 
-  const result = await processCommand({ text, userId: userId ?? null, source: source ?? null, confidence: typeof confidence === "number" ? confidence : null });
+  // El userId lo tomamos del token; si quieres permitir override, coméntalo.
+  const tokenUserId = (req as any).user?.sub as string | undefined;
+
+  const result = await processCommand({
+    text,
+    userId: tokenUserId ?? null,
+    source: typeof source === "string" ? source : null,
+    confidence: typeof confidence === "number" ? confidence : null,
+  });
 
   switch (result.status) {
     case "ok":
@@ -28,10 +40,13 @@ router.post("/command", async (req: Request, res: Response) => {
   }
 });
 
-/** DEBUG: listar logs (en producción proteger este endpoint) */
-router.get("/logs", async (_req: Request, res: Response) => {
-  const logs = await auditRepository.list();
-  res.json(logs);
-});
+/**
+ * GET /voice/logs
+ * Acceso: solo admin
+ */
+// router.get("/logs", verifyAccessToken, requireAdmin, async (_req: Request, res: Response) => {
+//   const logs = await auditRepository.list();
+//   res.json(logs);
+// });
 
 export default router;

@@ -1,12 +1,9 @@
-export class CartItem {
-  id!: string;         // UUID string
-  userId!: string;     // UUID del usuario dueño del carrito
-  productId!: string;  // UUID del producto
-  quantity!: number;
-  price!: number;
-  createdAt!: Date;
-  updatedAt!: Date;
-
-  // Si en el futuro quieres manejar soft-delete:
-  // deletedAt?: Date | null;
+export interface CartItem {
+  id: string;
+  userId: string;       // string (viene del JWT: sub)
+  productId: string;    // string/uuid
+  quantity: number;
+  price: number;        // precio unitario capturado al momento de agregar
+  createdAt: Date;
+  updatedAt: Date;
 }

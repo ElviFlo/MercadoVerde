@@ -1,99 +1,88 @@
 import type { Application, Request, Response } from "express";
-import swaggerUi from "swagger-ui-express";
-import swaggerJsdoc from "swagger-jsdoc";
+import * as swaggerUi from "swagger-ui-express";
+// CommonJS para evitar default import issues con ts-node
+const swaggerJsdoc: (opts: import("swagger-jsdoc").Options) => any = require("swagger-jsdoc");
 
 export function setupSwagger(app: Application) {
-  const PORT = process.env.PORT ?? "3006";
-  const HOST = process.env.SWAGGER_HOST ?? "http://localhost";
+  try {
+    const PORT = process.env.PORT ?? "3006";
+    const HOST = process.env.SWAGGER_HOST ?? "http://localhost";
 
-  const options: swaggerJsdoc.Options = {
-    definition: {
-      openapi: "3.0.3",
-      info: {
-        title: "MercadoVerde - Voice Service (Kora)",
-        version: "1.0.0",
-        description:
-          "Servicio de voz que conecta comandos de usuario con el carrito de compras. Convierte voz → texto → acción.",
-      },
-      servers: [{ url: `${HOST}:${PORT}` }],
-      components: {
-        securitySchemes: {
-          bearerAuth: {
-            type: "http",
-            scheme: "bearer",
-            bearerFormat: "JWT",
-          },
+    const options: import("swagger-jsdoc").Options = {
+      definition: {
+        openapi: "3.0.3",
+        info: {
+          title: "MercadoVerde - Voice API",
+          version: "1.0.0",
+          description:
+            "Procesamiento de comandos de voz. **/voice/command** requiere JWT (client o admin). **/voice/logs** solo admin. Tokens emitidos por `auth/`.",
         },
-        schemas: {
-          AddToCartRequest: {
-            type: "object",
-            required: ["productId", "quantity"],
-            properties: {
-              productId: { type: "string", example: "p_123" },
-              quantity: { type: "integer", example: 2 },
-              inputText: {
-                type: "string",
-                example: "Agrega dos cafés al carrito",
-              },
-            },
+        servers: [{ url: `${HOST}:${PORT}` }],
+        components: {
+          securitySchemes: {
+            bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
           },
-          AddToCartResponse: {
-            type: "object",
-            properties: {
-              ok: { type: "boolean", example: true },
-              message: { type: "string", example: "Producto agregado al carrito" },
-              userId: { type: "string", example: "u_1" },
-            },
-          },
-        },
-      },
-      paths: {
-        "/voice/add-to-cart": {
-          post: {
-            tags: ["Voice"],
-            summary: "Agrega un producto al carrito (usando JWT)",
-            security: [{ bearerAuth: [] }],
-            requestBody: {
-              required: true,
-              content: {
-                "application/json": {
-                  schema: { $ref: "#/components/schemas/AddToCartRequest" },
-                },
+          schemas: {
+            CommandRequest: {
+              type: "object",
+              required: ["text"],
+              properties: {
+                text: { type: "string", example: "agrega dos manzanas rojas al carrito" },
+                confidence: { type: "number", example: 0.92 },
+                source: { type: "string", example: "mic" },
               },
             },
-            responses: {
-              "200": {
-                description: "Producto agregado",
-                content: {
-                  "application/json": {
-                    schema: { $ref: "#/components/schemas/AddToCartResponse" },
-                  },
-                },
+            CommandOk: {
+              type: "object",
+              properties: {
+                status: { type: "string", example: "ok" },
+                message: { type: "string", example: "Añadí 2 x 'Manzana Roja' al carrito" },
+                productId: { type: "number", example: 123 },
+                quantity: { type: "number", example: 2 },
               },
-              "401": { description: "Token requerido" },
-              "500": { description: "Error en Voice Service" },
+            },
+            CommandAmbiguous: {
+              type: "object",
+              properties: {
+                status: { type: "string", example: "ambiguous" },
+                message: { type: "string", example: "Encontré varias coincidencias" },
+                candidates: { type: "array", items: { type: "string" } },
+              },
+            },
+            CommandRejected: {
+              type: "object",
+              properties: { status: { type: "string", example: "rejected" }, message: { type: "string" } },
             },
           },
         },
+        paths: {
+          "/voice/command": {
+            post: {
+              tags: ["voice"],
+              summary: "Procesar comando",
+              security: [{ bearerAuth: [] }],
+              requestBody: {
+                required: true,
+                content: { "application/json": { schema: { $ref: "#/components/schemas/CommandRequest" } } },
+              },
+              responses: {
+                "200": { description: "OK", content: { "application/json": { schema: { $ref: "#/components/schemas/CommandOk" } } } },
+                "401": { description: "Token ausente o inválido" },
+                "403": { description: "Rechazado" },
+                "422": { description: "Ambiguo" },
+                "500": { description: "Error" },
+              },
+            },
+          },
+        },
       },
-      tags: [{ name: "Voice" }],
-    },
-    apis: [],
-  };
+      apis: [],
+    };
 
-  const spec = swaggerJsdoc(options);
-
-  app.get("/docs.json", (_req: Request, res: Response) =>
-    res.status(200).json(spec)
-  );
-  app.use(
-    "/docs",
-    swaggerUi.serve,
-    swaggerUi.setup(spec, {
-      explorer: true,
-      swaggerOptions: { persistAuthorization: true },
-    })
-  );
-
-  console.log("[voice] Swagger montado en /docs");
+    const spec = swaggerJsdoc(options);
+    app.get("/docs.json", (_req: Request, res: Response) => res.json(spec));
+    app.use("/docs", swaggerUi.serve, swaggerUi.setup(spec, { explorer: true, swaggerOptions: { persistAuthorization: true } }));
+  } catch (err) {
+    console.error("[voice] Error montando Swagger:", err);
+  }
 }
