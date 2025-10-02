@@ -1,25 +1,38 @@
-# Build stage
+# Usa Node.js LTS (20)
 FROM node:20-alpine AS builder
+
+# Instalar dependencias necesarias del sistema
+RUN apk add --no-cache bash curl
+
+# Directorio de trabajo
 WORKDIR /app
 
-# Copiar package.json primero para aprovechar caché
+# Copiar manifests primero
 COPY package*.json ./
-RUN npm ci
 
-# Copiar todo el código
+# Instalar dependencias
+RUN npm install
+
+# Copiar el resto del código
 COPY . .
 
+# Compilar el proyecto
 RUN npm run build
 
-# Runtime stage
+# ======================
+# Etapa final (runtime)
+# ======================
 FROM node:20-alpine
+
 WORKDIR /app
-ENV NODE_ENV=production
 
-COPY --from=builder /app/package*.json ./
-RUN npm ci --omit=dev
-
+# Copiar dependencias desde builder
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+COPY package*.json ./
 
-EXPOSE 3004
+# Exponer el puerto (ajústalo según cada servicio en docker-compose)
+EXPOSE 3000
+
+# Comando de arranque
 CMD ["node", "dist/main.js"]

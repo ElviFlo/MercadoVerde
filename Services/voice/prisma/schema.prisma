@@ -1,0 +1,17 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model VoiceCommand {
+  id         String   @id @default(cuid())
+  userId     String?
+  text       String
+  intent     String?
+  confidence Float?
+  createdAt  DateTime @default(now())
+}
