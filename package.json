@@ -6,7 +6,9 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
     "postinstall": "prisma generate",
-    "bootstrap": "node scripts/install-all.mjs"
+    "bootstrap": "node scripts/install-all.mjs",
+    "up": "node scripts/up.mjs",
+    "abracadabra": "npm run bootstrap && npm run up"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",
