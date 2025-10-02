@@ -38,7 +38,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 // Arranque con bootstrap de admin
 const server = app.listen(PORT, async () => {
   try {
-    await ensureSingleAdmin(); // 👈 asegura el ÚNICO admin
+    await ensureSingleAdmin(); // asegura el ÚNICO admin
   } catch (e) {
     console.error("[auth] Error asegurando admin:", e);
   }

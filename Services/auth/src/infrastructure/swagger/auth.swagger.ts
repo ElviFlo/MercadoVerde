@@ -28,7 +28,7 @@ export function setupSwagger(app: Application) {
           schemas: {
             RegisterRequest: {
               type: "object",
-              required: ["username", "password", "email"],
+              required: ["name", "password", "email"],
               properties: {
                 username: { type: "string", example: "ricardo" },
                 password: { type: "string", example: "123456" },
@@ -37,7 +37,7 @@ export function setupSwagger(app: Application) {
             },
             LoginRequest: {
               type: "object",
-              required: ["username", "password"],
+              required: ["name", "password"],
               properties: {
                 username: { type: "string", example: "alejandro" },
                 password: { type: "string", example: "P4ssw0rd!" },
@@ -277,8 +277,6 @@ export function setupSwagger(app: Application) {
         swaggerOptions: { persistAuthorization: true },
       }),
     );
-
-    console.log("[auth] Swagger montado en /docs");
   } catch (err) {
     console.error("[auth] Error montando Swagger:", err);
   }
