@@ -114,7 +114,6 @@ export function setupSwagger(app: Application) {
       })
     );
 
-    console.log("[auth] Swagger montado en /docs");
   } catch (err) {
     console.error("[auth] Error montando Swagger:", err);
   }

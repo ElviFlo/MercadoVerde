@@ -1,11 +1,11 @@
 // src/infrastructure/controllers/cart.controller.ts
 import {
-  Body,
   Controller,
-  Delete,
   Get,
-  Param,
   Post,
+  Delete,
+  Param,
+  Body,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -45,27 +45,22 @@ export class CartController {
     });
   }
 
-  @Delete('items')
-  removeItemByBody(@Req() req: any, @Body() body: { productId: string }) {
-    const userId: string = req.user?.sub ?? req.user?.id;
-    return this.removeUC.execute({ userId, productId: body.productId });
-  }
-
+  // ÚNICO DELETE que queda: borra por path param (UUID o entero)
   @Delete('items/:productId')
   @ApiParam({
     name: 'productId',
-    description: 'UUID del producto',
-    example: '07f8a883-a691-4829-b671-ac8845a72961',
+    description: 'ID del producto (UUID o entero)',
+    schema: { oneOf: [{ type: 'integer', example: 1 }, { type: 'string', example: '07f8a883-a691-4829-b671-ac8845a72961' }] },
   })
-  removeItemByParam(@Req() req: any, @Param('productId') productId: string) {
+  async removeItemByParam(@Req() req: any, @Param('productId') productId: string) {
     const userId: string = req.user?.sub ?? req.user?.id;
-    return this.removeUC.execute({ userId, productId });
+    await this.removeUC.execute({ userId, productId: String(productId) });
+    return { ok: true };
   }
 
   @Delete('clear')
   async clear(@Req() req: any) {
     const userId: string = req.user?.sub ?? req.user?.id;
-    // Si luego creas ClearCartUseCase cámbialo aquí:
     const items = await this.getUC.execute(userId);
     for (const it of items) {
       await this.removeUC.execute({ userId, productId: it.productId });

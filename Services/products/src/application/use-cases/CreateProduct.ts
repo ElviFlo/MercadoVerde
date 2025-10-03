@@ -1,29 +1,16 @@
 import { Product } from "../../domain/entities/Product";
-import { ProductRepository } from "../../domain/repositories/IProductRepository";
-import { randomUUID } from "crypto";
+import { ProductRepository, CreateProductDTO } from "../../domain/repositories/IProductRepository";
 
-interface CreateProductDTO {
-  name: string;
-  description?: string;
-  price: number;
-  stock?: number;
-}
-
-export class CreateProduct{
-  constructor(private productRepository: ProductRepository) {}
+export class CreateProduct {
+  constructor(private repo: ProductRepository) {}
 
   async execute(data: CreateProductDTO): Promise<Product> {
-    const id = randomUUID();
-    const now = new Date();
-    const product: Product = {
-      id,
+    return this.repo.create({
       name: data.name,
       description: data.description ?? null,
       price: data.price,
+      stock: data.stock ?? 0,
       createdBy: (data as any).createdBy ?? "unknown",
-      createdAt: now,
-      updatedAt: now,
-    };
-    return this.productRepository.create(product);
-  }
+    });
+    }
 }

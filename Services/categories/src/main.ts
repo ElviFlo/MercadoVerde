@@ -36,7 +36,7 @@ async function bootstrap() {
   // Puerto (orders usa 3002; products 3003; categories -> 3004)
   const port = Number(process.env.PORT ?? 3004);
   await app.listen(port);
-  console.log(`🚀 Categories service running on port ${port}`);
+  console.log(`service running on http://localhost:${port}/docs with Swagger`);
 }
 
 bootstrap();

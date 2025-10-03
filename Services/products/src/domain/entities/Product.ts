@@ -1,22 +1,25 @@
 export interface Product {
-  id: string;
+  id: number;
   name: string;
-  description?: string | null;
-  price: number;           // en tu código manejarás number, se convierte a NUMERIC en DB
-  createdBy: string;       // user id del JWT
+  description: string | null;
+  price: number;
+  stock: number;
+  createdBy: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface CreateProductDTO {
   name: string;
-  description?: string | null;
   price: number;
-  createdBy: string;
+  description?: string | null;
+  stock?: number;
+  createdBy?: string;
 }
 
 export interface UpdateProductDTO {
   name?: string;
   description?: string | null;
   price?: number;
+  stock?: number;
 }

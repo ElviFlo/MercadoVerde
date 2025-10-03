@@ -1,34 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
-import type { AxiosRequestConfig, AxiosResponse } from 'axios';
-
-export interface ProductDTO {
-  id: string;
-  name: string;
-  price: number;
-  active: boolean;
-}
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class ProductsClient {
-  constructor(private readonly http: HttpService) {}
+  private base = process.env.PRODUCTS_BASE_URL ?? 'http://localhost:3003';
 
-  async getById(productId: string, authHeader?: string): Promise<ProductDTO> {
-    const base = process.env.PRODUCTS_BASE_URL ?? 'http://products:3003';
-
-    // Config tipado para axios
-    const cfg: AxiosRequestConfig = {};
-    if (authHeader) {
-      cfg.headers = { Authorization: authHeader };
-    }
-
-    // Observable -> AxiosResponse<ProductDTO>
-    const obs = this.http.get<ProductDTO>(`${base}/products/${productId}`, cfg);
-    const resp = await firstValueFrom<AxiosResponse<ProductDTO>>(obs);
-
-    const data = resp.data;
-    if (!data) throw new NotFoundException('Product not found');
-    return data;
+  async getById(id: string, authHeader?: string): Promise<any | null> {
+    const res = await fetch(`${this.base}/products/${encodeURIComponent(id)}`, {
+      headers: authHeader ? { authorization: authHeader } : {},
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`ProductsClient ${res.status}`);
+    return res.json();
   }
 }

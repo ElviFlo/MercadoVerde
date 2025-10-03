@@ -1,11 +1,15 @@
+// src/infrastructure/dto/remove-from-cart.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { IsUUID } from 'class-validator';
+import { IsUuidOrInt } from '../validators/is-uuid-or-int';
 
 export class RemoveFromCartDto {
   @ApiProperty({
-    example: 'a3f1bc00-9e5a-4d3b-84d4-7a1f3d0a7f3a',
-    description: 'UUID del producto a eliminar del carrito',
+    oneOf: [
+      { type: 'string', example: 'a3f1bc00-9e5a-4d3b-84d4-7a1f3d0a7f3a' },
+      { type: 'integer', example: 1 },
+    ],
+    description: 'Identificador del producto (UUID o entero)',
   })
-  @IsUUID()
-  productId!: string;
+  @IsUuidOrInt()
+  productId!: string | number;
 }

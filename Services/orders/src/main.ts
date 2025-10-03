@@ -39,5 +39,5 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`[orders] listening on http://0.0.0.0:${PORT}`);
+  console.log(`service running on http://localhost:${PORT}/docs with Swagger`);
 });

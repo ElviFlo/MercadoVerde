@@ -5,7 +5,10 @@
     "start:dev": "nest start --watch",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "install:all": "node scripts/install-all.js",
+    "up": "node scripts/up.js",
+    "abracadabra": "npm run install:all && npm run up"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",

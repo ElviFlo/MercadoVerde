@@ -1,58 +1,41 @@
-// Services/products/src/infrastructure/controllers/productController.ts
-import { Request, Response } from "express";
-import { ProductRepository } from "../../domain/repositories/IProductRepository";
+import { Router, Request, Response } from "express";
+import InMemoryProductRepository from "../repositories/product.repository.impl";
 import { CreateProduct } from "../../application/use-cases/CreateProduct";
-import { GetAllProducts } from "../../application/use-cases/GetAllProducts";
-import { GetProductById } from "../../application/use-cases/GetProductById";
-import { UpdateProduct } from "../../application/use-cases/UpdateProduct";
-import { DeleteProduct } from "../../application/use-cases/DeleteProduct";
 
-// Instanciamos el repo en memoria (puedes cambiarlo luego a Postgres)
-const repo = new ProductRepository();
+const repo = new InMemoryProductRepository();
 const createUC = new CreateProduct(repo);
-const getAllUC = new GetAllProducts(repo);
-const getByIdUC = new GetProductById(repo);
-const updateUC = new UpdateProduct(repo);
-const deleteUC = new DeleteProduct(repo);
+const router = Router();
 
-export async function create(req: Request, res: Response) {
-  try {
-    const product = await createUC.execute(req.body);
-    res.status(201).json(product);
-  } catch (err: any) {
-    res.status(400).json({ message: err.message });
+router.get("/products", async (_req: Request, res: Response) => {
+  const items = await repo.findAll();
+  res.json(items);
+});
+
+router.get("/products/:id", async (req, res) => {
+  const item = await repo.findById(req.params.id);
+  if (!item) return res.status(404).json({ message: "No encontrado" });
+  res.json(item);
+});
+
+router.post("/products", async (req, res) => {
+  const { name, price, description, stock } = req.body ?? {};
+  if (typeof name !== "string" || typeof price !== "number") {
+    return res.status(400).json({ message: "name (string) y price (number) son requeridos" });
   }
-}
+  const created = await createUC.execute({ name, price, description, stock });
+  res.status(201).json(created);
+});
 
-export async function getAll(_req: Request, res: Response) {
-  const products = await getAllUC.execute();
-  res.json(products);
-}
+router.put("/products/:id", async (req, res) => {
+  const updated = await repo.update(req.params.id, req.body ?? {});
+  if (!updated) return res.status(404).json({ message: "No encontrado" });
+  res.json(updated);
+});
 
-export async function getById(req: Request, res: Response) {
-  try {
-    const product = await getByIdUC.execute(req.params.id);
-    res.json(product);
-  } catch (err: any) {
-    res.status(404).json({ message: err.message });
-  }
-}
+router.delete("/products/:id", async (req, res) => {
+  const ok = await repo.delete(req.params.id);
+  if (!ok) return res.status(404).json({ message: "No encontrado" });
+  res.status(204).send();
+});
 
-export async function update(req: Request, res: Response) {
-  try {
-    const dto = { id: req.params.id, ...req.body };
-    const product = await updateUC.execute(dto);
-    res.json(product);
-  } catch (err: any) {
-    res.status(400).json({ message: err.message });
-  }
-}
-
-export async function remove(req: Request, res: Response) {
-  try {
-    await deleteUC.execute(req.params.id);
-    res.status(204).send();
-  } catch (err: any) {
-    res.status(404).json({ message: err.message });
-  }
-}
+export default router;

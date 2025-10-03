@@ -3,24 +3,21 @@ import * as jwt from 'jsonwebtoken';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
-    const req = context.switchToHttp().getRequest() as any;
-
-    const header = (req.headers['authorization'] || req.headers['Authorization']) as string | undefined;
-    if (!header || !header.toLowerCase().startsWith('bearer ')) {
-      throw new UnauthorizedException('Missing Bearer token');
-    }
-
-    const token = header.slice(7).trim();
+  canActivate(ctx: ExecutionContext): boolean {
+    const req = ctx.switchToHttp().getRequest();
+    const h = req.headers?.authorization;
+    if (!h?.startsWith('Bearer ')) throw new UnauthorizedException('Token requerido');
+    const token = h.slice(7).trim();
     try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET!, {
-        audience: process.env.JWT_AUD || undefined,
+      const payload = jwt.verify(token, process.env.JWT_SECRET as jwt.Secret, {
         issuer: process.env.JWT_ISS || undefined,
-      });
-      req.user = payload; // <- disponible en el controller: req.user?.sub / req.user?.id
+        audience: process.env.JWT_AUD || undefined,
+      }) as any;
+      req.user = { sub: payload?.sub || payload?.id || payload?.userId };
+      if (!req.user.sub) throw new UnauthorizedException('Token inválido');
       return true;
     } catch {
-      throw new UnauthorizedException('Invalid token');
+      throw new UnauthorizedException('Token inválido');
     }
   }
 }

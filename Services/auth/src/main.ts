@@ -39,8 +39,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 
 // -------- Arranque + shutdown limpio --------
 const server = app.listen(PORT, () => {
-  console.log(`[auth] escuchando en http://0.0.0.0:${PORT}`);
-  console.log(`[auth] Swagger en http://localhost:${PORT}/docs`);
+  console.log(`service running on http://localhost:${PORT}/docs with Swagger`);
 });
 
 const shutdown = (signal: string) => {

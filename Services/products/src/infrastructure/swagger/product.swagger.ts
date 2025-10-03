@@ -1,12 +1,15 @@
+// Services/products/src/infrastructure/swagger/product.swagger.ts
 import type { Application, Request, Response } from "express";
-import swaggerUi from "swagger-ui-express";
-import swaggerJsdoc from "swagger-jsdoc";
+import * as swaggerUi from "swagger-ui-express";
+// CommonJS require para evitar issues de tipos/import
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const swaggerJsdoc: (opts: import("swagger-jsdoc").Options) => any = require("swagger-jsdoc");
 
 export function setupSwagger(app: Application) {
   const PORT = process.env.PORT ?? "3003";
   const HOST = process.env.SWAGGER_HOST ?? "http://localhost";
 
-  const options: swaggerJsdoc.Options = {
+  const options: import("swagger-jsdoc").Options = {
     definition: {
       openapi: "3.0.3",
       info: {
@@ -22,74 +25,75 @@ export function setupSwagger(app: Application) {
         schemas: {
           ErrorResponse: {
             type: "object",
-            properties: { message: { type: "string", example: "Producto no encontrado" } }
+            properties: { message: { type: "string", example: "Producto no encontrado" } },
           },
           Product: {
             type: "object",
             properties: {
-              id: { type: "string", example: "3c3f85e8-5b3e-4b4e-8d3d-1b2c9f9f5a1d" },
-              name: { type: "string", example: "Café" },
-              description: { type: "string", nullable: true, example: "Tostado medio" },
-              price: { type: "number", example: 12000 },
-              createdBy: { type: "string", example: "u_1" },
-              createdAt: { type: "string", format: "date-time" },
-              updatedAt: { type: "string", format: "date-time" },
+              id: { type: "integer", example: 1 },                  // ← entero
+              name: { type: "string", example: "Café orgánico" },
+              description: { type: "string", nullable: true, example: "Tueste medio, 500g" },
+              price: { type: "number", example: 19.99 },
+              stock: { type: "integer", example: 50 },
+              createdBy: { type: "string", example: "u_123" },
+              createdAt: { type: "string", example: "2025-09-29T21:20:00.000Z" },
+              updatedAt: { type: "string", example: "2025-09-29T21:20:00.000Z" },
             },
           },
           CreateProductRequest: {
             type: "object",
             required: ["name", "price"],
             properties: {
-              name: { type: "string", example: "Café" },
-              description: { type: "string", example: "Tostado medio" },
-              price: { type: "number", example: 12000 },
+              name: { type: "string", example: "Café orgánico" },
+              price: { type: "number", example: 19.99 },
+              stock: { type: "integer", example: 50 },
+              description: { type: "string", nullable: true, example: "Tueste medio, 500g" },
             },
           },
           UpdateProductRequest: {
             type: "object",
             properties: {
-              name: { type: "string", example: "Café orgánico" },
-              description: { type: "string", example: "Tostado medio" },
-              price: { type: "number", example: 15000 },
+              name: { type: "string" },
+              price: { type: "number" },
+              stock: { type: "integer" },
+              description: { type: "string", nullable: true },
             },
           },
         },
       },
+      tags: [{ name: "Products" }],
       paths: {
         "/products": {
           get: {
             tags: ["Products"],
-            summary: "Listar productos",
             security: [{ bearerAuth: [] }],
+            summary: "Listar productos",
             responses: {
-              "200": {
-                description: "OK",
-                content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/Product" } } } },
-              },
+              "200": { description: "OK", content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/Product" } } } } },
+              "401": { description: "No autenticado" },
             },
           },
           post: {
             tags: ["Products"],
-            summary: "Crear producto",
             security: [{ bearerAuth: [] }],
+            summary: "Crear producto",
             requestBody: {
               required: true,
               content: { "application/json": { schema: { $ref: "#/components/schemas/CreateProductRequest" } } },
             },
             responses: {
               "201": { description: "Creado", content: { "application/json": { schema: { $ref: "#/components/schemas/Product" } } } },
-              "400": { description: "Solicitud inválida", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
-              "401": { description: "Token requerido" },
-              "403": { description: "Token inválido" },
+              "400": { description: "Body inválido" },
+              "401": { description: "No autenticado" },
             },
           },
         },
         "/products/{id}": {
           get: {
             tags: ["Products"],
-            summary: "Obtener por id",
             security: [{ bearerAuth: [] }],
-            parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+            summary: "Obtener producto",
+            parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
             responses: {
               "200": { description: "OK", content: { "application/json": { schema: { $ref: "#/components/schemas/Product" } } } },
               "404": { description: "No encontrado", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
@@ -97,42 +101,33 @@ export function setupSwagger(app: Application) {
           },
           put: {
             tags: ["Products"],
-            summary: "Actualizar",
             security: [{ bearerAuth: [] }],
-            parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+            summary: "Actualizar producto",
+            parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
             requestBody: {
               required: true,
               content: { "application/json": { schema: { $ref: "#/components/schemas/UpdateProductRequest" } } },
             },
             responses: {
               "200": { description: "Actualizado", content: { "application/json": { schema: { $ref: "#/components/schemas/Product" } } } },
-              "404": { description: "No encontrado", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+              "404": { description: "No encontrado" },
             },
           },
           delete: {
             tags: ["Products"],
-            summary: "Eliminar",
             security: [{ bearerAuth: [] }],
-            parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
-            responses: {
-              "204": { description: "Eliminado" },
-              "404": { description: "No encontrado", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
-            },
+            summary: "Eliminar producto",
+            parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+            responses: { "204": { description: "Eliminado" }, "404": { description: "No encontrado" } },
           },
         },
       },
-      tags: [{ name: "Products" }],
     },
-    apis: [], // si quieres, luego agregamos anotaciones JSDoc en rutas y las escaneamos
+    apis: [],
   };
 
   const spec = swaggerJsdoc(options);
 
-  app.get("/docs.json", (_req: Request, res: Response) => res.status(200).json(spec)); // útil para verificar
-  app.use("/docs", swaggerUi.serve, swaggerUi.setup(spec, {
-    explorer: true,
-    swaggerOptions: { persistAuthorization: true },
-  }));
-
-  console.log("[products] Swagger montado en /docs");
+  app.get("/docs.json", (_req: Request, res: Response) => res.json(spec));
+  app.use("/docs", swaggerUi.serve, swaggerUi.setup(spec, { explorer: true, swaggerOptions: { persistAuthorization: true } }));
 }

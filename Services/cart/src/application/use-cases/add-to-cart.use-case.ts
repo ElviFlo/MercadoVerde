@@ -1,10 +1,6 @@
-// src/application/use-cases/add-to-cart.use-case.ts
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { ProductsClient } from '../../infrastructure/clients/products.client';
-import {
-  CART_REPO,
-  CartRepository,
-} from '../../infrastructure/repositories/cart.repository';
+import { CART_REPO, CartRepository } from '../../infrastructure/repositories/cart.repository';
 
 @Injectable()
 export class AddToCartUseCase {
@@ -15,28 +11,20 @@ export class AddToCartUseCase {
 
   async execute(input: {
     userId: string;
-    productId: string;
+    productId: string | number;
     quantity: number;
     authHeader?: string;
   }) {
-    // 1) Producto desde el micro de products
-    const product = await this.products.getById(
-      input.productId,
-      input.authHeader,
-    );
+    const normalizedId = typeof input.productId === 'number' ? String(input.productId) : input.productId;
 
-    // 2) Validaciones
+    const product = await this.products.getById(normalizedId, input.authHeader);
     if (!product) throw new BadRequestException('Product not found');
-    if (product.active === false) {
-      throw new BadRequestException('Product is inactive');
-    }
-    const price = Number(product.price);
-    if (!Number.isFinite(price) || price <= 0) {
-      throw new BadRequestException('Invalid product price');
-    }
+    if (product.active === false) throw new BadRequestException('Product is inactive');
 
-    // 3) Guardar/Acumular
-    await this.repo.addItem(input.userId, input.productId, input.quantity, price);
+    const price = Number(product.price);
+    if (!Number.isFinite(price) || price <= 0) throw new BadRequestException('Invalid product price');
+
+    await this.repo.addItem(input.userId, normalizedId, input.quantity, price);
     return this.repo.getByUser(input.userId);
   }
 }

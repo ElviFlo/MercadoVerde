@@ -1,132 +1,65 @@
-import { parseCommand } from "../../infrastructure/services/NluParser";
-import axios from "axios";
-import { InMemoryAuditRepository } from "../../infrastructure/repositories/InMemoryAuditRepository";
-import { AuditLog } from "../../domain/entities/AuditLog";
-import { randomUUID } from "crypto";
-import { similarity } from "../../infrastructure/utils/fuzzy";
+import { CartClient } from "../../infrastructure/clients/cart.client";
 
-const PRODUCTS_URL = process.env.PRODUCTS_URL ?? "http://localhost:3003";
-const CART_URL = process.env.CART_URL ?? "http://localhost:3005";
-const MIN_CONF = Number(process.env.MIN_CONFIDENCE ?? 0.55);
+// Audit de juguete (en memoria)
+type Audit = { ts: string; text: string; userId: string | null; source: string | null; quantity?: number; productId?: string | number; status: string; message: string };
+class AuditRepository {
+  private rows: Audit[] = [];
+  add(row: Audit) { this.rows.push(row); }
+  list() { return [...this.rows].slice(-100); }
+}
+export const auditRepository = new AuditRepository();
 
-const auditRepo = new InMemoryAuditRepository();
+export type KoraResult =
+  | { status: "ok"; message: string; productId: string | number; quantity: number }
+  | { status: "ambiguous"; message: string; candidates: string[] }
+  | { status: "rejected"; message: string }
+  | { status: "needs_login"; message: string }
+  | { status: "error"; message: string };
 
-export type ProcessResult = {
-  status: "ok" | "ambiguous" | "rejected" | "error" | "needs_login";
-  message: string;
-  productId?: string;
-  quantity?: number;
-  candidates?: Array<{ id: string; name: string; score: number }>;
-};
+const numberWords: Record<string, number> = { uno:1, dos:2, tres:3, cuatro:4, cinco:5, seis:6, siete:7, ocho:8, nueve:9, diez:10 };
 
-export async function processCommand(params: {
-  text: string;
-  userId?: string | null;
-  source?: string | null;
-  confidence?: number | null;
-}): Promise<ProcessResult> {
-  const { text, userId = null, source = null, confidence = null } = params;
+function parseTextToCommand(text: string): { productId?: string | number; quantity?: number } {
+  const t = text.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+  // Busca "agrega(n) X (un|dos|3) (de)? (producto|id) Y" o "agrega 2 cafes id 1"
+  const idMatch = t.match(/(?:id|producto)\s*([a-z0-9-]+)/i);
+  const qtyWord = t.match(/\b(uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\b/);
+  const qtyNum = t.match(/\b([1-9]|10)\b/);
+  const quantity = qtyNum ? Number(qtyNum[1]) : (qtyWord ? numberWords[qtyWord[1]] : undefined);
 
-  const log = new AuditLog(randomUUID(), userId, source, text, confidence ?? null, new Date().toISOString(), "error", {});
-  try {
-    if (confidence !== null && confidence < MIN_CONF) {
-      log.result = "ambiguous";
-      log.details = { reason: "low_confidence", min: MIN_CONF };
-      await auditRepo.add(log);
-      return { status: "ambiguous", message: "No se entendió con suficiente confianza. Por favor repite." };
-    }
+  let productId: string | number | undefined = idMatch?.[1];
+  if (productId && /^\d+$/.test(productId)) productId = Number(productId);
 
-    const parsed = parseCommand(text);
-    if (parsed.intent === "forbidden") {
-      log.result = "rejected";
-      log.details = { reason: "forbidden_intent" };
-      await auditRepo.add(log);
-      return { status: "rejected", message: "Kora solo puede agregar productos al carrito. Usa la app para otras acciones." };
-    }
-    if (parsed.intent !== "add") {
-      log.result = "ambiguous";
-      log.details = { reason: "intent_not_add", parsed };
-      await auditRepo.add(log);
-      return { status: "ambiguous", message: "No detecté una intención de agregar. Dime por ejemplo: 'agrega 2 manzanas'." };
-    }
-
-    if (!userId) {
-      log.result = "needs_login";
-      await auditRepo.add(log);
-      return { status: "needs_login", message: "Necesitas iniciar sesión para que pueda agregar al carrito." };
-    }
-
-    const qty = parsed.quantity ?? 1;
-
-    // Get products list
-    const productsResp = await axios.get(`${PRODUCTS_URL}/products`).catch(_ => null);
-    const products = productsResp?.data ?? [];
-    if (!Array.isArray(products) || products.length === 0) {
-      log.result = "error";
-      log.details = { reason: "products_unavailable" };
-      await auditRepo.add(log);
-      return { status: "error", message: "No se pudo consultar el catálogo de productos." };
-    }
-
-    const candidates = products.map((p: any) => ({
-      id: p.id ?? p._id ?? p.productId ?? "",
-      name: p.name ?? p.nombre ?? p.title ?? "",
-    })).map((p: any) => ({ ...p, score: similarity(p.name, parsed.productName ?? "") }));
-
-    candidates.sort((a: any, b: any) => b.score - a.score);
-    const top = candidates.slice(0, 5).filter((c: any) => c.score > 0.35);
-
-    if (top.length === 0 || top[0].score < 0.5) {
-      log.result = "ambiguous";
-      log.details = { parsed, candidates: top.slice(0,3) };
-      await auditRepo.add(log);
-      return { status: "ambiguous", message: "No pude encontrar el producto con seguridad. ¿Puedes repetir con el nombre más claro?", candidates: top.map(c => ({ id: c.id, name: c.name, score: c.score })) };
-    }
-
-    if (top.length > 1 && (top[1].score > 0) && (top[0].score - top[1].score < 0.12)) {
-      log.result = "ambiguous";
-      log.details = { parsed, candidates: top.slice(0,3) };
-      await auditRepo.add(log);
-      return { status: "ambiguous", message: "Hay varios productos parecidos: " + top.slice(0,3).map(c => c.name).join(", ") + ". ¿Cuál quieres?", candidates: top.slice(0,3).map(c => ({ id: c.id, name: c.name, score: c.score })) };
-    }
-
-    const chosen = top[0];
-
-    // Validate stock via product detail if endpoint available
-    const productDetailResp = await axios.get(`${PRODUCTS_URL}/products/${chosen.id}`).catch(_ => null);
-    const productDetail = productDetailResp?.data ?? chosen;
-    const stock = typeof productDetail.stock === "number" ? productDetail.stock : null;
-    if (stock !== null && stock < qty) {
-      log.result = "rejected";
-      log.details = { parsed, chosen, stock };
-      await auditRepo.add(log);
-      return { status: "rejected", message: `No hay suficiente stock de ${chosen.name}. Hay ${stock}.` };
-    }
-
-    // Add to cart
-    const addResp = await axios.post(`${CART_URL}/cart/items`, { userId, productId: chosen.id, quantity: qty }).catch(e => {
-      log.result = "error";
-      log.details = { err: e?.response?.data ?? e.message, parsed, chosen };
-      return null;
-    });
-
-    if (!addResp) {
-      await auditRepo.add(log);
-      return { status: "error", message: "No se pudo agregar al carrito por un error en el servicio cart." };
-    }
-
-    log.result = "accepted";
-    log.details = { parsed, chosen, cartResponse: addResp.data };
-    await auditRepo.add(log);
-
-    return { status: "ok", message: `Agregué ${qty} x ${chosen.name} a tu carrito.`, productId: chosen.id, quantity: qty };
-
-  } catch (err: any) {
-    log.result = "error";
-    log.details = { error: err.message || String(err) };
-    await auditRepo.add(log);
-    return { status: "error", message: "Ocurrió un error procesando el comando." };
-  }
+  return { productId, quantity };
 }
 
-export const auditRepository = auditRepo;
+const cart = new CartClient();
+
+export async function processCommand(input: {
+  text: string;
+  userId: string | null;
+  source: string | null;
+  confidence: number | null;
+  authHeader?: string;
+}): Promise<KoraResult> {
+  try {
+    const { productId, quantity } = parseTextToCommand(input.text);
+
+    if (!productId || !quantity) {
+      auditRepository.add({ ts: new Date().toISOString(), text: input.text, userId: input.userId, source: input.source, status: "ambiguous", message: "Faltan datos" });
+      return { status: "ambiguous", message: "Especifica producto (id) y cantidad", candidates: [] };
+    }
+
+    const items = await cart.addItem({ productId, quantity, authHeader: input.authHeader });
+    auditRepository.add({ ts: new Date().toISOString(), text: input.text, userId: input.userId, source: input.source, status: "ok", message: "Agregado", productId, quantity });
+    return { status: "ok", message: `Se agregaron ${quantity} unidades del producto ${productId}`, productId, quantity };
+  } catch (err: any) {
+    const msg = String(err?.message || err);
+    if (/401|needs_login/i.test(msg)) {
+      auditRepository.add({ ts: new Date().toISOString(), text: input.text, userId: input.userId, source: input.source, status: "needs_login", message: msg });
+      return { status: "needs_login", message: "Necesitas iniciar sesión" };
+    }
+    auditRepository.add({ ts: new Date().toISOString(), text: input.text, userId: input.userId, source: input.source, status: "error", message: msg });
+    if (/404|not found/i.test(msg)) return { status: "rejected", message: "Producto no encontrado" };
+    return { status: "error", message: "No se pudo procesar el comando" };
+  }
+}

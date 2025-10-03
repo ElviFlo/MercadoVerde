@@ -20,7 +20,7 @@ async function bootstrap() {
     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api-docs', app, document);
+  SwaggerModule.setup('docs', app, document);
 
   // /health simple
   app.getHttpAdapter().get('/health', (req, res) => res.json({ ok: true, service: 'cart', timestamp: new Date().toISOString() }));
@@ -30,6 +30,6 @@ async function bootstrap() {
 
   const port = Number(process.env.PORT ?? 3005);
   await app.listen(port);
-  console.log(`🚀 Cart service running on port ${port}`);
+  console.log(`service running on http://localhost:${port}/docs with Swagger`);
 }
 bootstrap();
