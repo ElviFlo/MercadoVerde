@@ -13,6 +13,10 @@ model Product {
   description String?
   price       Decimal  
   categoryId  String?
+
+  // 👇 Nuevo campo: quién creó el producto
+  createdBy   String   @default("unknown")
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
