@@ -9,7 +9,7 @@ import {
 const router = Router();
 
 router.post("/register", AuthController.register);
-router.post("/login", AuthController.login); // único
+router.post("/login/client", AuthController.login);
 router.get("/validate", verifyAccessToken, AuthController.validate);
 
 // pruebas de autorización

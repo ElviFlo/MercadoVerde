@@ -25,7 +25,7 @@ export class ProductsClient {
     }
 
     // Observable -> AxiosResponse<ProductDTO>
-    const obs = this.http.get<ProductDTO>(${base}/products/${productId}, cfg);
+    const obs = this.http.get<ProductDTO>(`${base}/products/${productId}`, cfg);
     const resp = await firstValueFrom<AxiosResponse<ProductDTO>>(obs);
 
     const data = resp.data;
