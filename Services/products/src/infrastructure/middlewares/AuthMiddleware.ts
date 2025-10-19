@@ -4,8 +4,9 @@ import "dotenv/config";
 
 function requireEnv(name: string): string {
   const v = process.env[name];
-  if (!v || v.trim() === "")
+  if (!v || v.trim() === "") {
     throw new Error(`[products] Falta la variable de entorno ${name}`);
+  }
   return v;
 }
 
@@ -26,7 +27,6 @@ export interface AuthPayload {
 }
 
 declare global {
-  // para que req.user esté tipado
   namespace Express {
     interface Request {
       user?: AuthPayload;
@@ -35,13 +35,13 @@ declare global {
 }
 
 /**
- * Verifica el JWT y deja el payload en req.user.
- * OJO: aquí NO forzamos issuer/audience; eso lo validan los guards por rol.
+ * ✅ Verifica el JWT y deja el payload en req.user.
+ * No fuerza issuer/audience aquí; lo validan los guards por rol.
  */
 export function verifyAccessToken(
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
@@ -56,13 +56,15 @@ export function verifyAccessToken(
       clockTolerance: 5,
     }) as jwt.JwtPayload;
 
-    // Normalizamos a nuestro tipo
+    // Normalizamos y convertimos el rol a minúsculas
     req.user = {
       sub:
-        (payload.sub as any) ?? (payload as any).id ?? (payload as any).userId,
+        (payload.sub as any) ??
+        (payload as any).id ??
+        (payload as any).userId,
       name: (payload as any).name,
       email: (payload as any).email,
-      role: (payload as any).role,
+      role: ((payload as any).role ?? "").toString().toLowerCase() as any,
       iss: payload.iss as string | undefined,
       aud: payload.aud as string | string[] | undefined,
       iat: payload.iat,
@@ -77,17 +79,32 @@ export function verifyAccessToken(
   }
 }
 
-/** Guard: solo ADMIN (role + issuer) */
-export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+/** ✅ Guard: solo ADMIN (rol + issuer si existe) */
+export function requireAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   const u = req.user;
-  const ok =
-    !!u && u.role === "admin" && typeof u.iss === "string" && u.iss === JWT_ISS;
-  if (!ok) return res.status(403).json({ message: "Requiere rol admin" });
+  if (!u) return res.status(401).json({ message: "No autenticado" });
+
+  const isAdmin = u.role === "admin";
+  // Si viene issuer en el token, que coincida; si no viene, no bloquea
+  const issuerOk = !u.iss || u.iss === JWT_ISS;
+
+  if (!(isAdmin && issuerOk)) {
+    console.log("[requireAdmin] user payload:", u); // 👈 Debug temporal
+    return res.status(403).json({ message: "Requiere rol admin" });
+  }
   next();
 }
 
-/** Guard: solo CLIENT (role + audience) */
-export function requireClient(req: Request, res: Response, next: NextFunction) {
+/** ✅ Guard: solo CLIENT (rol + audience) */
+export function requireClient(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   const u = req.user;
   if (!u) return res.status(401).json({ message: "No autenticado" });
 
@@ -100,19 +117,18 @@ export function requireClient(req: Request, res: Response, next: NextFunction) {
 }
 
 /**
- * Guard útil para endpoints de lectura donde quieres permitir
- * tanto admin como client autenticados.
+ * ✅ Guard para endpoints de lectura: permite admin o client autenticado.
  */
 export function allowAnyAuthenticated(
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   const u = req.user;
   if (!u) return res.status(401).json({ message: "No autenticado" });
 
-  // Admin válido
-  if (u.role === "admin" && u.iss === JWT_ISS) return next();
+  // Admin válido (si viene issuer, debe coincidir)
+  if (u.role === "admin" && (!u.iss || u.iss === JWT_ISS)) return next();
 
   // Client válido
   const hasAud = Array.isArray(u.aud)

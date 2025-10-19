@@ -10,14 +10,15 @@
     "lint": "eslint . --ext .ts"
   },
   "dependencies": {
+    "@nestjs/jwt": "^11.0.1",
     "@prisma/client": "^6.16.2",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
-    "prisma": "^6.16.2",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.11.0",
+    "prisma": "^6.16.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   },

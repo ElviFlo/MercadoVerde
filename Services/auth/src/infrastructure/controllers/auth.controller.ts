@@ -4,19 +4,15 @@ import { RegisterUser } from "../../application/use-cases/RegisterUser";
 import { LoginUser } from "../../application/use-cases/LoginUser";
 import { ValidateToken } from "../../application/use-cases/ValidateToken";
 import { UserRepository } from "../repositories/UserRepository";
+import jwt from "jsonwebtoken";
 
-// Inyección básica (mantén tu estilo actual)
+// Inyección básica
 const userRepository = new UserRepository();
 const registerUser = new RegisterUser(userRepository);
 const loginUser = new LoginUser(userRepository);
 const validateToken = new ValidateToken();
 
 export class AuthController {
-  /**
-   * POST /auth/register
-   * Body: { name, email, password }
-   * Crea SIEMPRE rol 'client' (la promoción a admin se hace aparte).
-   */
   static async register(req: Request, res: Response) {
     try {
       const { name, email, password } = req.body ?? {};
@@ -34,12 +30,6 @@ export class AuthController {
     }
   }
 
-  /**
-   * POST /auth/login
-   * Body: { email, password }  o  { name, password }
-   * Respuesta: { role, accessToken }
-   * Firma el token según el rol que está en DB (admin -> iss, client -> aud).
-   */
   static async login(req: Request, res: Response) {
     try {
       const { email, name, password } = req.body ?? {};
@@ -49,10 +39,7 @@ export class AuthController {
           .json({ message: "Debes enviar email o name, y el password" });
       }
 
-      const { role, token } = await loginUser.execute(
-        { email, name },
-        password,
-      );
+      const { role, token } = await loginUser.execute({ email, name }, password);
       return res.status(200).json({ role, accessToken: token });
     } catch (e: any) {
       return res
@@ -61,11 +48,6 @@ export class AuthController {
     }
   }
 
-  /**
-   * GET /auth/validate
-   * Header: Authorization: Bearer <token>
-   * Respuesta: { valid: boolean, payload?: any }
-   */
   static async validate(req: Request, res: Response) {
     try {
       const header = req.headers.authorization || "";
@@ -79,6 +61,39 @@ export class AuthController {
       return res
         .status(401)
         .json({ valid: false, message: "Token inválido o expirado" });
+    }
+  }
+
+  // ✅ Nuevo método para login de admin
+  static async loginAdmin(req: Request, res: Response) {
+    try {
+      const { email, password } = req.body ?? {};
+
+      if (!email || !password)
+        return res.status(400).json({ message: "email y password son requeridos" });
+
+      const adminEmail = process.env.ADMIN_EMAIL;
+      const adminPassword = process.env.ADMIN_PASSWORD;
+      const jwtSecret = process.env.JWT_SECRET!;
+
+      if (email !== adminEmail || password !== adminPassword)
+        return res.status(401).json({ message: "Credenciales inválidas" });
+
+      const token = jwt.sign(
+        {
+          sub: "superadmin",
+          name: "superadmin",
+          email,
+          role: "admin",
+        },
+        jwtSecret,
+        { expiresIn: "15m", audience: "mercadoverde-clients" }
+      );
+
+      return res.status(200).json({ role: "admin", accessToken: token });
+    } catch (err) {
+      console.error("[auth] Error en loginAdmin:", err);
+      return res.status(500).json({ message: "Error interno del servidor" });
     }
   }
 }

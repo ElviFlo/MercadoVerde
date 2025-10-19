@@ -10,6 +10,7 @@ const router = Router();
 
 router.post("/register", AuthController.register);
 router.post("/login/client", AuthController.login);
+router.post("/login/admin", AuthController.loginAdmin);
 router.get("/validate", verifyAccessToken, AuthController.validate);
 
 // pruebas de autorización
