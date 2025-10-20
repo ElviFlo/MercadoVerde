@@ -8,15 +8,19 @@ datasource db {
 }
 
 model Product {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  price       Decimal  
-  categoryId  String?
+  id          String   @id @default(uuid()) @db.Text
+  name        String   @db.Text
+  description String?  @db.Text
+  price       Decimal  @db.Decimal(10, 2)
 
-  // 👇 Nuevo campo: quién creó el producto
-  createdBy   String   @default("unknown")
+  categoryId  String?  @map("category_id")  @db.Text
+  active      Boolean  @default(true)
+  stock       Int      @default(0)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdBy   String   @default("unknown")  @map("created_by") @db.Text
+  createdAt   DateTime @default(now())      @map("created_at")
+  updatedAt   DateTime @updatedAt           @map("updated_at")
+
+  @@map("products") // ← la tabla real en Postgres
+  @@index([categoryId], map: "idx_products_category_id")
 }

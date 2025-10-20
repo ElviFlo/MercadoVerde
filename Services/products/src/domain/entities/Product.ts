@@ -2,24 +2,36 @@ export interface Product {
   id: string;
   name: string;
   description?: string | null;
-  price: number;                 // en dominio usamos number; Prisma lo convierte a NUMERIC
-  categoryId?: string | null;    // 👈 ahora sí existe este campo
-  createdBy: string;             // email o sub del usuario creador
+  price: number;
+  categoryId?: string | null;
+  createdBy: string;
   createdAt: Date;
   updatedAt: Date;
+
+  // 👇 NUEVOS CAMPOS
+  active: boolean;   // indica si está disponible para comprar
+  stock: number;     // cantidad disponible
 }
 
 export interface CreateProductDTO {
   name: string;
   description?: string | null;
-  price: number;
-  categoryId?: string | null;    // 👈 nuevo
-  createdBy: string;             // ya estaba, lo mantenemos
+  price: number | string;
+  categoryId?: string | null;
+  createdBy: string;
+
+  // 👇 opcionales al crear
+  active?: boolean;
+  stock?: number;
 }
 
 export interface UpdateProductDTO {
   name?: string;
   description?: string | null;
   price?: number;
-  categoryId?: string | null;    // 👈 opcional también en update
+  categoryId?: string | null;
+
+  // 👇 opcionales al actualizar
+  active?: boolean;
+  stock?: number;
 }

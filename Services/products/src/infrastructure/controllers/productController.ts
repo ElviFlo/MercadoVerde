@@ -1,51 +1,20 @@
-// Services/products/src/infrastructure/controllers/productController.ts
 import { Request, Response } from "express";
-import { ProductRepository } from "../../domain/repositories/IProductRepository";
-import { CreateProduct } from "../../application/use-cases/CreateProduct";
+
 import { GetAllProducts } from "../../application/use-cases/GetAllProducts";
 import { GetProductById } from "../../application/use-cases/GetProductById";
+import { CreateProduct } from "../../application/use-cases/CreateProduct";
 import { UpdateProduct } from "../../application/use-cases/UpdateProduct";
 import { DeleteProduct } from "../../application/use-cases/DeleteProduct";
+import { CreateProductDTO } from "../../application/dtos/CreateProductDTO";
+import { InMemoryProductRepository } from "../repositories/product.repository.impl";
 
-// Instanciamos el repo en memoria (puedes cambiarlo luego a Postgres)
-const repo = new ProductRepository();
-const createUC = new CreateProduct(repo);
-const getAllUC = new GetAllProducts(repo);
-const getByIdUC = new GetProductById(repo);
-const updateUC = new UpdateProduct(repo);
-const deleteUC = new DeleteProduct(repo);
-
-/**
- * ✅ Helper para determinar el actor (email o sub) desde el JWT.
- * Prefiere email si está presente; si no, usa sub. Si ninguno existe, usa "unknown".
- */
-function getActor(req: Request): string {
-  return req.user?.email || String(req.user?.sub || "unknown");
-}
-
-export async function create(req: Request, res: Response) {
-  try {
-    // Extraemos los datos del body
-    const { name, description, price, categoryId } = req.body;
-
-    // ✅ Agregamos quién creó el producto desde el JWT
-    const createdBy = getActor(req);
-
-    // Pasamos todos los datos al caso de uso
-    const product = await createUC.execute({
-      name,
-      description,
-      price,
-      categoryId,
-      createdBy, // 👈 Nuevo campo que llegará al repositorio
-    });
-
-    res.status(201).json(product);
-  } catch (err: any) {
-    console.error("[createProduct] Error:", err);
-    res.status(400).json({ message: err.message });
-  }
-}
+// Simple wiring for the demo: construct repo + use-cases here. In a real app you'd use DI.
+const repo = new InMemoryProductRepository();
+const getAllUC = new GetAllProducts(repo as any);
+const getByIdUC = new GetProductById(repo as any);
+const createUC = new CreateProduct(repo as any);
+const updateUC = new UpdateProduct(repo as any);
+const deleteUC = new DeleteProduct(repo as any);
 
 export async function getAll(_req: Request, res: Response) {
   const products = await getAllUC.execute();
@@ -53,33 +22,37 @@ export async function getAll(_req: Request, res: Response) {
 }
 
 export async function getById(req: Request, res: Response) {
-  try {
-    const product = await getByIdUC.execute(req.params.id);
-    res.json(product);
-  } catch (err: any) {
-    res.status(404).json({ message: err.message });
-  }
+  const id = req.params.id as string;
+  const p = await getByIdUC.execute(id);
+  if (!p) return res.status(404).json({ message: "Product not found" });
+  return res.json(p);
+}
+
+export async function create(req: Request, res: Response) {
+  const body = req.body as Omit<CreateProductDTO, "createdBy">;
+  const dto: CreateProductDTO = {
+    name: body.name,
+    description: (body as any).description ?? null,
+    price: (body as any).price,
+    categoryId: (body as any).categoryId ?? null,
+    createdBy: (req as any).user?.email ?? "unknown",
+    active: (body as any).active,
+    stock: (body as any).stock,
+  };
+  const created = await createUC.execute(dto);
+  res.status(201).json(created);
 }
 
 export async function update(req: Request, res: Response) {
-  try {
-    const dto = { id: req.params.id, ...req.body };
-
-    // (Opcional) podrías agregar quién actualizó si agregas un campo updatedBy en tu modelo:
-    // dto.updatedBy = getActor(req);
-
-    const product = await updateUC.execute(dto);
-    res.json(product);
-  } catch (err: any) {
-    res.status(400).json({ message: err.message });
-  }
+  const id = req.params.id as string;
+  const body = req.body as any;
+  const updated = await updateUC.execute({ id, ...body });
+  if (!updated) return res.status(404).json({ message: "Product not found" });
+  res.json(updated);
 }
 
 export async function remove(req: Request, res: Response) {
-  try {
-    await deleteUC.execute(req.params.id);
-    res.status(204).send();
-  } catch (err: any) {
-    res.status(404).json({ message: err.message });
-  }
+  const id = req.params.id as string;
+  const ok = await deleteUC.execute(id);
+  res.json({ ok });
 }

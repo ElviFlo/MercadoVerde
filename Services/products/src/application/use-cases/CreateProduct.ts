@@ -1,34 +1,22 @@
-import { Product } from "../../domain/entities/Product";
 import { ProductRepository } from "../../domain/repositories/IProductRepository";
-import { randomUUID } from "crypto";
-
-export interface CreateProductDTO {
-  name: string;
-  description?: string;
-  price: number;
-  stock?: number;
-  categoryId?: string | null;
-  createdBy: string; // 👈 nuevo campo obligatorio aquí
-}
+import { CreateProductDTO } from "../dtos/CreateProductDTO";
+import { Product } from "../../domain/entities/Product";
 
 export class CreateProduct {
-  constructor(private productRepository: ProductRepository) {}
+  constructor(private readonly repo: ProductRepository) {}
 
-  async execute(data: CreateProductDTO): Promise<Product> {
-    const id = randomUUID();
-    const now = new Date();
-
-    const product: Product = {
-      id,
-      name: data.name,
-      description: data.description ?? null,
-      price: data.price,
-      categoryId: data.categoryId ?? null,   // 👈 ahora lo admite
-      createdBy: data.createdBy || "unknown", // 👈 viene tipado, sin `as any`
-      createdAt: now,
-      updatedAt: now,
+  async execute(input: CreateProductDTO): Promise<Product> {
+    // Normaliza y aplica defaults; el repo devuelve Product completo
+    const dto: CreateProductDTO = {
+      name: input.name,
+      description: input.description ?? null,
+      price: typeof input.price === "string" ? parseFloat(input.price) : input.price,
+      categoryId: input.categoryId ?? null,
+      createdBy: input.createdBy ?? "unknown",
+      active: input.active ?? true,
+      stock: input.stock ?? 0,
     };
 
-    return this.productRepository.create(product);
+    return this.repo.create(dto);
   }
 }

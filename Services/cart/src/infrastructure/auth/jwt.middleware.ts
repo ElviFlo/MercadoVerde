@@ -13,11 +13,33 @@ export class JwtAuthGuard implements CanActivate {
 
     const token = header.slice(7).trim();
     try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET!, {
-        audience: process.env.JWT_AUD || undefined,
-        issuer: process.env.JWT_ISS || undefined,
-      });
-      req.user = payload; // <- disponible en el controller: req.user?.sub / req.user?.id
+      const secret = process.env.JWT_SECRET!;
+      const aud = process.env.JWT_AUD;
+      const iss = process.env.JWT_ISS;
+
+      let payload: any;
+
+      // Try verifying as client token (audience) first if configured
+      if (aud) {
+        try {
+          payload = jwt.verify(token, secret, { audience: aud });
+        } catch (e) {
+          // if audience check fails and we have an issuer configured, try issuer
+          if (iss) {
+            payload = jwt.verify(token, secret, { issuer: iss });
+          } else {
+            throw e;
+          }
+        }
+      } else if (iss) {
+        // No audience configured, try issuer
+        payload = jwt.verify(token, secret, { issuer: iss });
+      } else {
+        // No constraints configured, just verify signature
+        payload = jwt.verify(token, secret);
+      }
+
+      req.user = payload; // available in controller: req.user?.sub / req.user?.id
       return true;
     } catch {
       throw new UnauthorizedException('Invalid token');
