@@ -1,6 +1,7 @@
 // Services/orders/src/infrastructure/repositories/order.repository.ts
 import { PrismaClient } from "@prisma/client";
 import { fetchProduct } from "../services/products.client";
+import { reserveProduct, releaseProduct } from "../services/products.client";
 
 const prisma = new PrismaClient();
 
@@ -35,18 +36,32 @@ export class OrderRepository {
     );
 
     const total = enriched.reduce((acc, it) => acc + Number(it.subtotal), 0);
+    // Reserve stock for each item (sequential to keep logic simple)
+    const reserved: Array<{ productId: string; quantity: number }> = [];
+    try {
+      for (const it of enriched) {
+        await reserveProduct(it.productId, it.quantity);
+        reserved.push({ productId: it.productId, quantity: it.quantity });
+      }
 
-    return prisma.order.create({
-      data: {
-        userId,                 // string (cuid/uuid)
-        status: "PENDING",
-        total,                  // Decimal en DB; Prisma acepta number
-        items: { create: enriched },
-      },
-      include: {
-        items: true,
-      },
-    });
+      const created = await prisma.order.create({
+        data: {
+          userId,
+          status: "PENDING",
+          total,
+          items: { create: enriched },
+        },
+        include: { items: true },
+      });
+
+      return created;
+    } catch (e) {
+      // release any reservations on failure
+      for (const r of reserved) {
+        try { await releaseProduct(r.productId, r.quantity); } catch { /* best-effort */ }
+      }
+      throw e;
+    }
   }
 
   async getById(id: string) {

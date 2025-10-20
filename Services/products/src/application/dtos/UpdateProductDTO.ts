@@ -1,3 +1,3 @@
 import type { CreateProductDTO } from './CreateProductDTO';
 
-export type UpdateProductDTO = Partial<CreateProductDTO>;
+export type UpdateProductDTO = Partial<CreateProductDTO> & { stock?: number };

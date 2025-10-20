@@ -6,6 +6,7 @@ interface UpdateProductDTO {
   name?: string;
   description?: string | null;
   price?: number;
+  stock?: number;
 }
 
 export class UpdateProduct{
@@ -18,6 +19,7 @@ export class UpdateProduct{
       name: data.name ?? existing.name,
       description: data.description ?? existing.description,
       price: data.price ?? existing.price,
+      stock: typeof data.stock === 'number' ? data.stock : existing.stock,
     };
     const updated = await this.productRepository.update(data.id, updateData);
     if (!updated) throw new Error("No se pudo actualizar el producto");

@@ -16,3 +16,15 @@ export async function fetchProduct(productId: string, authHeader?: string) {
   });
   return res.data; // { id, name, price, ... }
 }
+
+export async function reserveProduct(productId: string, quantity: number) {
+  const url = `${base}/products/${productId}/reserve`;
+  const res = await axios.post(url, { quantity });
+  return res.data; // { ok, remaining }
+}
+
+export async function releaseProduct(productId: string, quantity: number) {
+  const url = `${base}/products/${productId}/release`;
+  const res = await axios.post(url, { quantity });
+  return res.data;
+}

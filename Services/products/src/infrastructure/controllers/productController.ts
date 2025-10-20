@@ -56,3 +56,31 @@ export async function remove(req: Request, res: Response) {
   const ok = await deleteUC.execute(id);
   res.json({ ok });
 }
+
+// POST /products/:id/reserve  { quantity }
+export async function reserve(req: Request, res: Response) {
+  const id = req.params.id as string;
+  const qty = Number(req.body?.quantity ?? 0);
+  if (!(qty > 0)) return res.status(400).json({ message: 'quantity inválido' });
+
+  const p = await getByIdUC.execute(id);
+  if (!p) return res.status(404).json({ message: 'Product not found' });
+  if ((p.stock ?? 0) < qty) return res.status(400).json({ message: 'stock insuficiente' });
+
+  // Decrement stock
+  const updated = await updateUC.execute({ id, stock: (p.stock ?? 0) - qty });
+  return res.json({ ok: true, remaining: updated?.stock ?? 0 });
+}
+
+// POST /products/:id/release  { quantity }
+export async function release(req: Request, res: Response) {
+  const id = req.params.id as string;
+  const qty = Number(req.body?.quantity ?? 0);
+  if (!(qty > 0)) return res.status(400).json({ message: 'quantity inválido' });
+
+  const p = await getByIdUC.execute(id);
+  if (!p) return res.status(404).json({ message: 'Product not found' });
+
+  const updated = await updateUC.execute({ id, stock: (p.stock ?? 0) + qty });
+  return res.json({ ok: true, remaining: updated?.stock ?? 0 });
+}

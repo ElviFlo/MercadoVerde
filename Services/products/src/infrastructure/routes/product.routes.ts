@@ -33,4 +33,8 @@ router.delete(
   productController.remove,
 );
 
+// Stock reservation endpoints (internal use by orders)
+router.post("/:id/reserve", productController.reserve);
+router.post("/:id/release", productController.release);
+
 export default router;
