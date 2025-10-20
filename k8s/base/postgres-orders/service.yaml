@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-orders-svc
+  namespace: mercadoverde
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres-orders
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
