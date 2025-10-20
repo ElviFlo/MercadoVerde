@@ -20,7 +20,7 @@ services:
       POSTGRES_USER: auth_user
       POSTGRES_PASSWORD: auth_pass
       POSTGRES_DB: auth_db
-    ports: ["5433:5432"]
+    # ports: ["5433:5432"]
     volumes:
       - pgdata-auth:/var/lib/postgresql/data
     healthcheck:
@@ -37,7 +37,7 @@ services:
       POSTGRES_USER: products_user
       POSTGRES_PASSWORD: products_pass
       POSTGRES_DB: products_db
-    ports: ["5434:5432"]
+    # ports: ["5434:5432"]
     volumes:
       - pgdata-products:/var/lib/postgresql/data
     healthcheck:
@@ -54,7 +54,7 @@ services:
       POSTGRES_USER: orders_user
       POSTGRES_PASSWORD: orders_pass
       POSTGRES_DB: orders_db
-    ports: ["5435:5432"]
+    # ports: ["5435:5432"]
     volumes:
       - pgdata-orders:/var/lib/postgresql/data
     healthcheck:
@@ -71,7 +71,7 @@ services:
       POSTGRES_USER: cart_user
       POSTGRES_PASSWORD: cart_pass
       POSTGRES_DB: cart_db
-    ports: ["5436:5432"]
+    # ports: ["5436:5432"]
     volumes:
       - pgdata-cart:/var/lib/postgresql/data
     healthcheck:
@@ -88,7 +88,7 @@ services:
       POSTGRES_USER: categories_user
       POSTGRES_PASSWORD: categories_pass
       POSTGRES_DB: categories_db
-    ports: ["5437:5432"]
+    # ports: ["5437:5432"]
     volumes:
       - pgdata-categories:/var/lib/postgresql/data
     healthcheck:
@@ -105,7 +105,7 @@ services:
       POSTGRES_USER: voice_user
       POSTGRES_PASSWORD: voice_pass
       POSTGRES_DB: voice_db
-    ports: ["5438:5432"]
+    # ports: ["5438:5432"]
     volumes:
       - pgdata-voice:/var/lib/postgresql/data
     healthcheck:

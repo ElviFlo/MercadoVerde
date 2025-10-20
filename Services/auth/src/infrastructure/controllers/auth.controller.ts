@@ -4,7 +4,7 @@ import { RegisterUser } from "../../application/use-cases/RegisterUser";
 import { LoginUser } from "../../application/use-cases/LoginUser";
 import { ValidateToken } from "../../application/use-cases/ValidateToken";
 import { UserRepository } from "../repositories/UserRepository";
-import jwt from "jsonwebtoken";
+import { sign, type SignOptions } from "jsonwebtoken";
 
 // Inyección básica
 const userRepository = new UserRepository();
@@ -30,6 +30,11 @@ export class AuthController {
     }
   }
 
+  /**
+   * Login de cliente
+   * Acepta email O name + password
+   * BLOQUEA si el usuario es admin (no debe poder entrar aquí)
+   */
   static async login(req: Request, res: Response) {
     try {
       const { email, name, password } = req.body ?? {};
@@ -40,6 +45,12 @@ export class AuthController {
       }
 
       const { role, token } = await loginUser.execute({ email, name }, password);
+
+      // 🔒 Blindaje: este endpoint es SOLO para clientes
+      if (role !== "client") {
+        return res.status(403).json({ message: "Prohibido: solo client" });
+      }
+
       return res.status(200).json({ role, accessToken: token });
     } catch (e: any) {
       return res
@@ -64,31 +75,59 @@ export class AuthController {
     }
   }
 
-  // ✅ Nuevo método para login de admin
+  /**
+   * Login de admin
+   * Acepta email O name + password
+   * Valida contra ADMIN_EMAIL / ADMIN_NAME y ADMIN_PASSWORD
+   * Emite token con rol=admin
+   */
   static async loginAdmin(req: Request, res: Response) {
     try {
-      const { email, password } = req.body ?? {};
+      const { email, name, password } = req.body ?? {};
+      const identifier = (email ?? name)?.trim();
 
-      if (!email || !password)
-        return res.status(400).json({ message: "email y password son requeridos" });
+      if (!identifier || !password) {
+        return res
+          .status(400)
+          .json({ message: "Debes enviar email o name, y el password" });
+      }
 
       const adminEmail = process.env.ADMIN_EMAIL;
+      const adminName = process.env.ADMIN_NAME;
       const adminPassword = process.env.ADMIN_PASSWORD;
-      const jwtSecret = process.env.JWT_SECRET!;
 
-      if (email !== adminEmail || password !== adminPassword)
+      const jwtSecret = process.env.JWT_SECRET as string;
+      if (!jwtSecret) {
+        return res.status(500).json({ message: "JWT_SECRET no configurado" });
+      }
+
+      const jwtIss = process.env.JWT_ISS || undefined;
+      const jwtAud = process.env.JWT_AUD || undefined;
+      const accessTtl = (process.env.JWT_ACCESS_TTL ?? "2h") as SignOptions["expiresIn"];
+
+      // Validar credenciales por email O name
+      const identifierOk =
+        (email && adminEmail && email === adminEmail) ||
+        (name && adminName && name === adminName);
+
+      if (!identifierOk || password !== adminPassword) {
         return res.status(401).json({ message: "Credenciales inválidas" });
+      }
 
-      const token = jwt.sign(
-        {
-          sub: "superadmin",
-          name: "superadmin",
-          email,
-          role: "admin",
-        },
-        jwtSecret,
-        { expiresIn: "15m", audience: "mercadoverde-clients" }
-      );
+      const payload = {
+        sub: "superadmin",
+        role: "admin" as const,
+        email: adminEmail,
+        name: adminName,
+      };
+
+      const options: SignOptions = {
+        expiresIn: accessTtl,
+        issuer: jwtIss,
+        audience: jwtAud,
+      };
+
+      const token = sign(payload, jwtSecret, options);
 
       return res.status(200).json({ role: "admin", accessToken: token });
     } catch (err) {

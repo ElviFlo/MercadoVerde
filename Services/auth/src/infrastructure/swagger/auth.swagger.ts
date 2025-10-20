@@ -28,20 +28,33 @@ export function setupSwagger(app: Application) {
           schemas: {
             RegisterRequest: {
               type: "object",
-              required: ["name", "password", "email"],
+              required: ["name", "email", "password"],
               properties: {
-                username: { type: "string", example: "ricardo" },
-                password: { type: "string", example: "123456" },
+                name: { type: "string", example: "Ricardo Pérez" },
                 email: { type: "string", example: "ricardo@example.com" },
+                password: { type: "string", example: "123456" },
               },
             },
+            // Login por email O por name (ejemplos por defecto → CLIENTE)
             LoginRequest: {
-              type: "object",
-              required: ["name", "password"],
-              properties: {
-                username: { type: "string", example: "alejandro" },
-                password: { type: "string", example: "P4ssw0rd!" },
-              },
+              oneOf: [
+                {
+                  type: "object",
+                  required: ["email", "password"],
+                  properties: {
+                    email: { type: "string", example: "client@example.com" }, // ← ejemplo cliente
+                    password: { type: "string", example: "123456" },
+                  },
+                },
+                {
+                  type: "object",
+                  required: ["name", "password"],
+                  properties: {
+                    name: { type: "string", example: "clientuser" }, // ← ejemplo cliente
+                    password: { type: "string", example: "123456" },
+                  },
+                },
+              ],
             },
             AccessTokenResponse: {
               type: "object",
@@ -63,8 +76,8 @@ export function setupSwagger(app: Application) {
                   additionalProperties: true,
                   example: {
                     sub: "user-id-123",
-                    username: "alejandro",
-                    role: "admin",
+                    email: "client@example.com",
+                    role: "client",
                     iss: "mercadoverde-auth",
                     iat: 1712345678,
                     exp: 1712349278,
@@ -75,14 +88,14 @@ export function setupSwagger(app: Application) {
             MeResponse: {
               type: "object",
               properties: {
-                message: { type: "string", example: "OK admin" },
+                message: { type: "string", example: "OK client" },
                 user: {
                   type: "object",
                   additionalProperties: true,
                   example: {
                     sub: "user-id-123",
-                    username: "alejandro",
-                    role: "admin",
+                    email: "client@example.com",
+                    role: "client",
                     iss: "mercadoverde-auth",
                   },
                 },
@@ -121,6 +134,7 @@ export function setupSwagger(app: Application) {
               },
             },
           },
+
           "/auth/login/admin": {
             post: {
               tags: ["Auth"],
@@ -130,6 +144,17 @@ export function setupSwagger(app: Application) {
                 content: {
                   "application/json": {
                     schema: { $ref: "#/components/schemas/LoginRequest" },
+                    // 👇 Ejemplos específicos para ADMIN
+                    examples: {
+                      byEmail: {
+                        summary: "Admin por email",
+                        value: { email: "super@admin.com", password: "P4ssw0rd!" },
+                      },
+                      byName: {
+                        summary: "Admin por name",
+                        value: { name: "superadmin", password: "P4ssw0rd!" },
+                      },
+                    },
                   },
                 },
               },
@@ -138,9 +163,7 @@ export function setupSwagger(app: Application) {
                   description: "Token de acceso para admin",
                   content: {
                     "application/json": {
-                      schema: {
-                        $ref: "#/components/schemas/AccessTokenResponse",
-                      },
+                      schema: { $ref: "#/components/schemas/AccessTokenResponse" },
                     },
                   },
                 },
@@ -148,6 +171,7 @@ export function setupSwagger(app: Application) {
               },
             },
           },
+
           "/auth/login/client": {
             post: {
               tags: ["Auth"],
@@ -157,6 +181,17 @@ export function setupSwagger(app: Application) {
                 content: {
                   "application/json": {
                     schema: { $ref: "#/components/schemas/LoginRequest" },
+                    // 👇 Ejemplos específicos para CLIENTE
+                    examples: {
+                      byEmail: {
+                        summary: "Cliente por email",
+                        value: { email: "client@example.com", password: "123456" },
+                      },
+                      byName: {
+                        summary: "Cliente por name",
+                        value: { name: "clientuser", password: "123456" },
+                      },
+                    },
                   },
                 },
               },
@@ -165,9 +200,7 @@ export function setupSwagger(app: Application) {
                   description: "Token de acceso para cliente",
                   content: {
                     "application/json": {
-                      schema: {
-                        $ref: "#/components/schemas/AccessTokenResponse",
-                      },
+                      schema: { $ref: "#/components/schemas/AccessTokenResponse" },
                     },
                   },
                 },
@@ -175,16 +208,27 @@ export function setupSwagger(app: Application) {
               },
             },
           },
+
           "/auth/login": {
             post: {
               tags: ["Auth"],
-              summary:
-                "Login genérico (compatibilidad: emite token de cliente)",
+              summary: "Login genérico (compatibilidad: emite token de cliente)",
               requestBody: {
                 required: true,
                 content: {
                   "application/json": {
                     schema: { $ref: "#/components/schemas/LoginRequest" },
+                    // 👇 También ejemplos de cliente (nunca admin)
+                    examples: {
+                      byEmail: {
+                        summary: "Cliente por email",
+                        value: { email: "client@example.com", password: "123456" },
+                      },
+                      byName: {
+                        summary: "Cliente por name",
+                        value: { name: "clientuser", password: "123456" },
+                      },
+                    },
                   },
                 },
               },
@@ -193,9 +237,7 @@ export function setupSwagger(app: Application) {
                   description: "Token de acceso (cliente)",
                   content: {
                     "application/json": {
-                      schema: {
-                        $ref: "#/components/schemas/AccessTokenResponse",
-                      },
+                      schema: { $ref: "#/components/schemas/AccessTokenResponse" },
                     },
                   },
                 },
@@ -203,6 +245,7 @@ export function setupSwagger(app: Application) {
               },
             },
           },
+
           "/auth/validate": {
             get: {
               tags: ["Validate"],
@@ -221,6 +264,7 @@ export function setupSwagger(app: Application) {
               },
             },
           },
+
           "/auth/me/admin": {
             get: {
               tags: ["Me"],
@@ -241,6 +285,7 @@ export function setupSwagger(app: Application) {
               },
             },
           },
+
           "/auth/me/client": {
             get: {
               tags: ["Me"],
