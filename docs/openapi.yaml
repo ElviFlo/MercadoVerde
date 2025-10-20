@@ -4,8 +4,16 @@ info:
   version: 0.1.0
   description: >
     Contrato inicial basado en prisma/schema.prisma (Users, Categories, Products, Cart, Orders).
+
+# Server genérico (fallback) con variables; cada path sobreescribe con su propio server
 servers:
-  - url: http://localhost:3000/api/v1
+  - url: http://{host}:{port}/api/v1
+    variables:
+      host:
+        default: localhost
+      port:
+        default: "3001"
+        enum: ["3001","3002","3003","3004","3005","3006"]
 
 tags:
   - name: Auth
@@ -17,6 +25,8 @@ tags:
 
 paths:
   /auth/login:
+    servers:
+      - url: http://localhost:3001/api/v1
     post:
       tags: [Auth]
       summary: Iniciar sesión
@@ -34,6 +44,8 @@ paths:
         '401': { description: Credenciales inválidas }
 
   /categories:
+    servers:
+      - url: http://localhost:3004/api/v1
     get:
       tags: [Categories]
       summary: Listar categorías
@@ -63,6 +75,8 @@ paths:
         '409': { description: Nombre duplicado }
 
   /products:
+    servers:
+      - url: http://localhost:3003/api/v1
     get:
       tags: [Products]
       summary: Listar/buscar productos
@@ -103,6 +117,8 @@ paths:
               schema: { $ref: '#/components/schemas/Product' }
 
   /products/{id}:
+    servers:
+      - url: http://localhost:3003/api/v1
     get:
       tags: [Products]
       summary: Ver producto por id
@@ -120,6 +136,8 @@ paths:
         '404': { description: No encontrado }
 
   /cart:
+    servers:
+      - url: http://localhost:3005/api/v1
     get:
       tags: [Cart]
       summary: Ver carrito activo del usuario
@@ -133,6 +151,8 @@ paths:
         '401': { description: No autorizado }
 
   /cart/items:
+    servers:
+      - url: http://localhost:3005/api/v1
     post:
       tags: [Cart]
       summary: Agregar o actualizar ítem del carrito (upsert)
@@ -151,7 +171,7 @@ paths:
         '400': { description: Datos inválidos }
         '401': { description: No autorizado }
         '404': { description: Producto no encontrado }
-        '409': { description: Stock insuficiente (si se valida aquí) }
+        '409': { description: Stock insuficiente }
     delete:
       tags: [Cart]
       summary: Eliminar ítem del carrito
@@ -167,6 +187,8 @@ paths:
         '404': { description: Ítem no encontrado }
 
   /orders:
+    servers:
+      - url: http://localhost:3002/api/v1
     get:
       tags: [Orders]
       summary: Listar pedidos del usuario
@@ -194,6 +216,8 @@ paths:
         '409': { description: Stock insuficiente }
 
   /orders/{id}:
+    servers:
+      - url: http://localhost:3002/api/v1
     get:
       tags: [Orders]
       summary: Ver pedido por id
@@ -214,6 +238,8 @@ paths:
         '404': { description: No encontrado }
 
   /voice-intents:
+    servers:
+      - url: http://localhost:3006/api/v1
     post:
       tags: [Voice]
       summary: Registrar log de intent de voz
