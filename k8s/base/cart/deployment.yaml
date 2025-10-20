@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cart
+  namespace: mercadoverde
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cart
+  template:
+    metadata:
+      labels:
+        app: cart
+    spec:
+      containers:
+        - name: cart
+          image: elviflo/mercadoverde-cart:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3005
+          env:
+            - name: NODE_ENV
+              valueFrom: { configMapKeyRef: { name: common-env, key: NODE_ENV } }
+            - name: PORT
+              value: "3005"
+            - name: DATABASE_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres-cart-svc:5432/$(POSTGRES_DB)?schema=public"
+            - name: POSTGRES_USER
+              valueFrom: { secretKeyRef: { name: postgres-cart-secret, key: POSTGRES_USER } }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: postgres-cart-secret, key: POSTGRES_PASSWORD } }
+            - name: POSTGRES_DB
+              valueFrom: { secretKeyRef: { name: postgres-cart-secret, key: POSTGRES_DB } }
+          readinessProbe:
+            httpGet: { path: "/health", port: 3005 }
+            initialDelaySeconds: 8
+          livenessProbe:
+            httpGet: { path: "/health", port: 3005 }
+            initialDelaySeconds: 20
