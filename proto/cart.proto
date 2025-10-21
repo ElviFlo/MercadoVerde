@@ -1,0 +1,35 @@
+syntax = "proto3";
+package cart.v1;
+
+service CartService {
+  rpc GetActive (GetActiveRequest) returns (Cart);
+  rpc UpsertItem (UpsertItemRequest) returns (Cart);
+  rpc RemoveItem (RemoveItemRequest) returns (Cart);
+}
+
+message GetActiveRequest { string user_id = 1; }
+
+message UpsertItemRequest {
+  string user_id = 1;
+  string product_id = 2;
+  int32 quantity = 3; // >= 0
+}
+
+message RemoveItemRequest {
+  string user_id = 1;
+  string product_id = 2;
+}
+
+message CartItem {
+  string product_id = 1;
+  int32 quantity = 2;
+  int64 price_cents = 3;
+  string currency = 4;
+}
+
+message Cart {
+  string id = 1;
+  string user_id = 2;
+  bool active = 3;
+  repeated CartItem items = 4;
+}

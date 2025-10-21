@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package voice.v1;
+
+import "common.proto";
+
+// Servicio mínimo para registrar intents de voz.
+// Puedes extenderlo con streaming o consultas históricas si lo necesitas.
+service VoiceService {
+  // Registra un intent de voz (log)
+  rpc LogIntent (LogIntentRequest) returns (LogIntentAck);
+
+  // (Opcional) Lista intents registrados (útil para auditoría)
+  rpc ListIntents (ListIntentsRequest) returns (ListIntentsResponse);
+}
+
+message LogIntentRequest {
+  string transcript = 1;
+  string language = 2;      // ej: "es-CO", "en-US"
+  float  confidence = 3;    // 0..1
+  string activation = 4;    // ej: "ey kora"
+  string intent = 5;        // ej: "add_to_cart"
+  string result = 6;        // ej: "added product 123"
+  string user_id = 7;       // opcional si asocias a usuario
+  string session_id = 8;    // opcional para agrupar eventos
+}
+
+message LogIntentAck {
+  string id = 1;            // id del log creado
+  int64  created_at_unix = 2;
+}
+
+message ListIntentsRequest {
+  // filtros opcionales
+  string user_id = 1;
+  string intent = 2;
+  int64  from_unix = 3;     // rango de tiempo (inicio)
+  int64  to_unix = 4;       // rango de tiempo (fin)
+  int32  page = 5;          // paginación simple
+  int32  page_size = 6;     // tamaño de página
+}
+
+message VoiceIntentLog {
+  string id = 1;
+  string user_id = 2;
+  string transcript = 3;
+  string language = 4;
+  float  confidence = 5;
+  string activation = 6;
+  string intent = 7;
+  string result = 8;
+  int64  created_at_unix = 9;
+  string session_id = 10;
+}
+
+message ListIntentsResponse {
+  repeated VoiceIntentLog items = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  int32 total = 4;
+}

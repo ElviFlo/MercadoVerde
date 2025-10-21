@@ -1,0 +1,14 @@
+syntax = "proto3";
+package auth.v1;
+
+service AuthService {
+  // Valida un JWT y devuelve el userId y roles
+  rpc VerifyToken (VerifyTokenRequest) returns (VerifyTokenResponse);
+}
+
+message VerifyTokenRequest { string access_token = 1; }
+message VerifyTokenResponse {
+  string user_id = 1;
+  repeated string roles = 2;
+  bool valid = 3;
+}

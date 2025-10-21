@@ -21,9 +21,12 @@ ENV NODE_ENV=production
 
 # artefactos
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/dist         ./dist
+COPY --from=builder /app/prisma       ./prisma
+COPY --from=builder /app/proto        ./proto
 COPY package*.json ./
+
+EXPOSE 3001 50050
 
 # aplica migraciones y arranca
 CMD ["sh","-c","npx prisma migrate deploy || true; node dist/main.js"]

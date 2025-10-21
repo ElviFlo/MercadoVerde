@@ -1,0 +1,33 @@
+syntax = "proto3";
+package products.v1;
+
+service ProductsService {
+  rpc FindById (FindByIdRequest) returns (Product);
+  rpc List (ListRequest) returns (ListResponse);
+}
+
+message FindByIdRequest { string id = 1; }
+
+message ListRequest {
+  string q = 1;
+  string category_id = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message Product {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int64 price_cents = 4;
+  string currency = 5;
+  int32 stock = 6;
+  string category_id = 7;
+}
+
+message ListResponse {
+  repeated Product items = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  int32 total = 4;
+}

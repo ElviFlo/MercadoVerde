@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package categories.v1;
+
+import "common.proto";
+
+service CategoriesService {
+  // Obtiene una categoría por id
+  rpc GetById (GetByIdRequest) returns (Category);
+
+  // Lista categorías (sin filtros por simplicidad)
+  rpc List (common.v1.Empty) returns (ListResponse);
+
+  // Crea una nueva categoría
+  rpc Create (CreateRequest) returns (Category);
+}
+
+message GetByIdRequest {
+  string id = 1;
+}
+
+message CreateRequest {
+  string name = 1;
+}
+
+message Category {
+  string id = 1;
+  string name = 2;
+  int64 created_at_unix = 3; // opcional, útil para auditoría
+}
+
+message ListResponse {
+  repeated Category items = 1;
+  int32 total = 2;
+}

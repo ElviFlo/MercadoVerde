@@ -11,6 +11,9 @@
     "lint": "eslint . --ext .ts"
   },
   "dependencies": {
+    "@grpc/grpc-js": "^1.14.0",
+    "@grpc/proto-loader": "^0.8.0",
+    "@nestjs/microservices": "^11.1.6",
     "@prisma/client": "^6.16.2",
     "axios": "^1.7.3",
     "cors": "^2.8.5",

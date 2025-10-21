@@ -121,20 +121,17 @@ services:
     container_name: auth_service
     env_file:
       - ./auth/.env
+    environment:
+      - PORT=3001
+      - AUTH_GRPC_URL=0.0.0.0:50050
+      - AUTH_PROTO_PATH=/app/proto/auth.proto    # 👈 coincide con lo que copiamos
+      - JWT_SECRET=${JWT_SECRET:-changeme}
     ports: ["3001:3001"]
+    expose:
+      - "50050"
     depends_on:
       postgres-auth:
         condition: service_healthy
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "node -e \"require('http').get('http://localhost:'+ (process.env.PORT||'3001') +'/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""
-        ]
-      interval: 10s
-      timeout: 3s
-      retries: 10
-      start_period: 10s
     restart: unless-stopped
     networks: [mv_net]
 
@@ -143,7 +140,13 @@ services:
     container_name: products_service
     env_file:
       - ./products/.env
+    environment:
+      - PORT=3003
+      - PRODUCTS_GRPC_URL=0.0.0.0:50051
+      - AUTH_GRPC_URL=auth:50050
     ports: ["3003:3003"]
+    expose:
+      - "50051"
     depends_on:
       postgres-products:
         condition: service_healthy
@@ -167,11 +170,23 @@ services:
     container_name: orders_service
     env_file:
       - ./orders/.env
+    environment:
+      - PORT=3002
+      - ORDERS_GRPC_URL=0.0.0.0:50053
+      - CART_GRPC_URL=cart:50052
+      - PRODUCTS_GRPC_URL=products:50051
+      - AUTH_GRPC_URL=auth:50050
     ports: ["3002:3002"]
+    expose:
+      - "50053"
     depends_on:
       postgres-orders:
         condition: service_healthy
       products:
+        condition: service_started
+      cart:
+        condition: service_started
+      auth:
         condition: service_started
     healthcheck:
       test:
@@ -191,11 +206,20 @@ services:
     container_name: cart_service
     env_file:
       - ./cart/.env
+    environment:
+      - PORT=3005
+      - CART_GRPC_URL=0.0.0.0:50052
+      - PRODUCTS_GRPC_URL=products:50051
+      - AUTH_GRPC_URL=auth:50050
     ports: ["3005:3005"]
+    expose:
+      - "50052"
     depends_on:
       postgres-cart:
         condition: service_healthy
       auth:
+        condition: service_started
+      products:
         condition: service_started
     healthcheck:
       test:
@@ -215,7 +239,13 @@ services:
     container_name: categories_service
     env_file:
       - ./categories/.env
+    environment:
+      - PORT=3004
+      - CATEGORIES_GRPC_URL=0.0.0.0:50054
+      - AUTH_GRPC_URL=auth:50050
     ports: ["3004:3004"]
+    expose:
+      - "50054"
     depends_on:
       postgres-categories:
         condition: service_healthy
@@ -239,10 +269,18 @@ services:
     container_name: voice_service
     env_file:
       - ./voice/.env
+    environment:
+      - PORT=3006
+      - VOICE_GRPC_URL=0.0.0.0:50055
+      - AUTH_GRPC_URL=auth:50050
     ports: ["3006:3006"]
+    expose:
+      - "50055"
     depends_on:
       postgres-voice:
         condition: service_healthy
+      auth:
+        condition: service_started
     healthcheck:
       test:
         [

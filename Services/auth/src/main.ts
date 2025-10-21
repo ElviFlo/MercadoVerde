@@ -5,7 +5,9 @@ import cors from "cors";
 
 import authRouter from "./infrastructure/routes/auth.routes";
 import { setupSwagger } from "./infrastructure/swagger/auth.swagger";
-import { ensureSingleAdmin } from "./infrastructure/bootstrap/admin.bootstrap"; // 👈 NUEVO
+import { ensureSingleAdmin } from "./infrastructure/bootstrap/admin.bootstrap";
+
+import { startAuthGrpcServer } from "./infrastructure/grpc/auth.grpc"; // 👈 NUEVO
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 3001);
@@ -38,9 +40,10 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 // Arranque con bootstrap de admin
 const server = app.listen(PORT, async () => {
   try {
-    await ensureSingleAdmin(); // asegura el ÚNICO admin
+    await ensureSingleAdmin();
++   await startAuthGrpcServer(); // 👈 Levanta gRPC en paralelo al HTTP
   } catch (e) {
-    console.error("[auth] Error asegurando admin:", e);
+    console.error("[auth] Error durante bootstrap:", e);
   }
   console.log(`🟢 Auth service running on http://localhost:${PORT}/docs with Swagger`);
 });

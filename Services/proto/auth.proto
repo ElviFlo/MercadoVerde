@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package auth.v1;
+
+// Auth service for token verification
+service AuthService {
+  // Verify an access token and return user information
+  rpc VerifyToken(VerifyTokenRequest) returns (VerifyTokenResponse);
+}
+
+// Request message for token verification
+message VerifyTokenRequest {
+  // The access token to verify
+  string access_token = 1;
+}
+
+// Response message for token verification
+message VerifyTokenResponse {
+  // User ID extracted from the token
+  string user_id = 1;
+  
+  // User roles/permissions
+  repeated string roles = 2;
+  
+  // Whether the token is valid
+  bool valid = 3;
+}
