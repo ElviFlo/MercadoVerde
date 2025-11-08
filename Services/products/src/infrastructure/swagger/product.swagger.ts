@@ -10,6 +10,14 @@ export function setupSwagger(app: Application) {
   const PORT = process.env.PORT ?? "3003";
   const HOST = process.env.SWAGGER_HOST ?? "http://localhost";
 
+  const idParam = {
+    name: "id",
+    in: "path",
+    required: true,
+    schema: { type: "string", example: "h4lqwzif6u" }, // ← string
+    description: "ID del producto (string, ej. cuid/uuid)",
+  };
+
   const options: import("swagger-jsdoc").Options = {
     definition: {
       openapi: "3.0.3",
@@ -28,19 +36,16 @@ export function setupSwagger(app: Application) {
           Product: {
             type: "object",
             properties: {
-              id: { type: "integer", example: 1 },
+              id: { type: "string", example: "h4lqwzif6u" }, // ← string
               name: { type: "string", example: "Café orgánico" },
               price: { type: "number", example: 19.99 },
               stock: { type: "integer", example: 50 },
-              description: { type: "string", example: "Tueste medio, 500g" },
-              createdAt: {
-                type: "string",
-                example: "2025-09-29T21:20:00.000Z",
-              },
-              updatedAt: {
-                type: "string",
-                example: "2025-09-29T21:20:00.000Z",
-              },
+              description: { type: "string", nullable: true, example: "Tueste medio, 500g" },
+              categoryId: { type: "string", nullable: true, example: "cat_abc123" },
+              createdBy: { type: "string", example: "super@admin.com" },
+              active: { type: "boolean", example: true },
+              createdAt: { type: "string", format: "date-time", example: "2025-09-29T21:20:00.000Z" },
+              updatedAt: { type: "string", format: "date-time", example: "2025-09-29T21:20:00.000Z" },
             },
           },
           CreateProductRequest: {
@@ -51,6 +56,8 @@ export function setupSwagger(app: Application) {
               price: { type: "number", example: 19.99 },
               stock: { type: "integer", example: 50 },
               description: { type: "string", example: "Tueste medio, 500g" },
+              categoryId: { type: "string", nullable: true, example: "cat_abc123" },
+              active: { type: "boolean", example: true },
             },
           },
           UpdateProductRequest: {
@@ -60,6 +67,8 @@ export function setupSwagger(app: Application) {
               price: { type: "number" },
               stock: { type: "integer" },
               description: { type: "string" },
+              categoryId: { type: "string", nullable: true },
+              active: { type: "boolean" },
             },
           },
           MessageResponse: {
@@ -69,10 +78,7 @@ export function setupSwagger(app: Application) {
         },
       },
       tags: [
-        {
-          name: "Products - Client",
-          description: "Lectura (requiere client o admin autenticado)",
-        },
+        { name: "Products - Client", description: "Lectura (requiere client o admin autenticado)" },
         { name: "Products - Admin", description: "Mutaciones (solo admin)" },
       ],
       paths: {
@@ -88,10 +94,7 @@ export function setupSwagger(app: Application) {
                 description: "OK",
                 content: {
                   "application/json": {
-                    schema: {
-                      type: "array",
-                      items: { $ref: "#/components/schemas/Product" },
-                    },
+                    schema: { type: "array", items: { $ref: "#/components/schemas/Product" } },
                   },
                 },
               },
@@ -114,11 +117,7 @@ export function setupSwagger(app: Application) {
             responses: {
               "201": {
                 description: "Creado",
-                content: {
-                  "application/json": {
-                    schema: { $ref: "#/components/schemas/Product" },
-                  },
-                },
+                content: { "application/json": { schema: { $ref: "#/components/schemas/Product" } } },
               },
               "401": { description: "No autenticado" },
               "403": { description: "Requiere rol admin" },
@@ -131,25 +130,13 @@ export function setupSwagger(app: Application) {
           get: {
             tags: ["Products - Client"],
             summary: "Obtener producto por id",
-            description:
-              "Requiere token válido. Acepta **client** o **admin**.",
+            description: "Requiere token válido. Acepta **client** o **admin**.",
             security: [{ bearerAuth: [] }],
-            parameters: [
-              {
-                name: "id",
-                in: "path",
-                required: true,
-                schema: { type: "integer" },
-              },
-            ],
+            parameters: [idParam], // ← string
             responses: {
               "200": {
                 description: "OK",
-                content: {
-                  "application/json": {
-                    schema: { $ref: "#/components/schemas/Product" },
-                  },
-                },
+                content: { "application/json": { schema: { $ref: "#/components/schemas/Product" } } },
               },
               "401": { description: "No autenticado" },
               "403": { description: "Prohibido (rol inválido)" },
@@ -160,14 +147,7 @@ export function setupSwagger(app: Application) {
             tags: ["Products - Admin"],
             summary: "Actualizar producto (admin)",
             security: [{ bearerAuth: [] }],
-            parameters: [
-              {
-                name: "id",
-                in: "path",
-                required: true,
-                schema: { type: "integer" },
-              },
-            ],
+            parameters: [idParam], // ← string
             requestBody: {
               required: true,
               content: {
@@ -179,11 +159,7 @@ export function setupSwagger(app: Application) {
             responses: {
               "200": {
                 description: "Actualizado",
-                content: {
-                  "application/json": {
-                    schema: { $ref: "#/components/schemas/Product" },
-                  },
-                },
+                content: { "application/json": { schema: { $ref: "#/components/schemas/Product" } } },
               },
               "401": { description: "No autenticado" },
               "403": { description: "Requiere rol admin" },
@@ -194,14 +170,7 @@ export function setupSwagger(app: Application) {
             tags: ["Products - Admin"],
             summary: "Eliminar producto (admin)",
             security: [{ bearerAuth: [] }],
-            parameters: [
-              {
-                name: "id",
-                in: "path",
-                required: true,
-                schema: { type: "integer" },
-              },
-            ],
+            parameters: [idParam], // ← string
             responses: {
               "204": { description: "Eliminado" },
               "401": { description: "No autenticado" },
@@ -217,10 +186,7 @@ export function setupSwagger(app: Application) {
 
   const spec = swaggerJsdoc(options);
 
-  // JSON del spec (útil para debug)
   app.get("/docs.json", (_req: Request, res: Response) => res.json(spec));
-
-  // UI
   app.use(
     "/docs",
     swaggerUi.serve,
