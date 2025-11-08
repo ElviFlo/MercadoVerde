@@ -36,8 +36,8 @@ export class CategoriesController {
 
   @Get()
   @ApiOperation({ summary: "Listar categorías", description: "Devuelve una lista de todas las categorías. Se puede filtrar por nombre, estado y padre." })
-  @ApiQuery({ name: 'q', required: false, description: 'Buscar por nombre o slug', type: String })
-  @ApiQuery({ name: 'active', required: false, description: 'Filtra solo categorías activas/inactivas', enum: ['true', 'false'], type: String, example: 'true' })
+  @ApiQuery({ name: 'q', required: false, description: 'Nombre (o slug) de la categoría a buscar', type: String })
+  @ApiQuery({ name: 'active', required: false, description: '¿Está activa? "true" para solo activas, "false" para solo inactivas', enum: ['true', 'false'], type: String })
   @ApiQuery({ name: 'parentId', required: false, description: 'Filtrar solo hijas de la categoría indicada, null para raíz', type: String })
   @ApiResponse({ status: 200, description: "Listado de categorías retornado exitosamente." })
   @ApiResponse({ status: 401, description: "No autorizado. Token JWT ausente o inválido." })
