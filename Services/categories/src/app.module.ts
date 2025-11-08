@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { CategoriesController } from './infrastructure/controllers/categories.controller';
-import { HealthController } from './infrastructure/controllers/health.controller';
 import { MemoryCategoryRepository } from './infrastructure/persistence/memory-category.repository';
 
 // Use cases
@@ -12,7 +11,7 @@ import { GetCategoriesUseCase } from './application/use-cases/get-categories.use
 import { GetCategoryTreeUseCase } from './application/use-cases/get-category-tree.usecase';
 
 @Module({
-  controllers: [CategoriesController, HealthController],
+  controllers: [CategoriesController],
   providers: [
     { provide: 'CategoryRepository', useClass: MemoryCategoryRepository },
     CreateCategoryUseCase,
