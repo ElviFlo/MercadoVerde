@@ -67,46 +67,10 @@ export function setupSwagger(app: Application) {
               type: "object",
               properties: { message: { type: "string" } },
             },
-            ValidateResponse: {
-              type: "object",
-              properties: {
-                valid: { type: "boolean", example: true },
-                payload: {
-                  type: "object",
-                  additionalProperties: true,
-                  example: {
-                    sub: "user-id-123",
-                    email: "client@example.com",
-                    role: "client",
-                    iss: "mercadoverde-auth",
-                    iat: 1712345678,
-                    exp: 1712349278,
-                  },
-                },
-              },
-            },
-            MeResponse: {
-              type: "object",
-              properties: {
-                message: { type: "string", example: "OK client" },
-                user: {
-                  type: "object",
-                  additionalProperties: true,
-                  example: {
-                    sub: "user-id-123",
-                    email: "client@example.com",
-                    role: "client",
-                    iss: "mercadoverde-auth",
-                  },
-                },
-              },
-            },
           },
         },
         tags: [
           { name: "Auth", description: "Registro y login" },
-          { name: "Validate", description: "Validación de tokens" },
-          { name: "Me", description: "Rutas protegidas de prueba" },
         ],
         paths: {
           "/auth/register": {
@@ -242,67 +206,6 @@ export function setupSwagger(app: Application) {
                   },
                 },
                 "401": { description: "Credenciales inválidas" },
-              },
-            },
-          },
-
-          "/auth/validate": {
-            get: {
-              tags: ["Validate"],
-              summary: "Validar token (cualquier rol)",
-              security: [{ bearerAuth: [] }],
-              responses: {
-                "200": {
-                  description: "Token válido",
-                  content: {
-                    "application/json": {
-                      schema: { $ref: "#/components/schemas/ValidateResponse" },
-                    },
-                  },
-                },
-                "401": { description: "Token inválido o ausente" },
-              },
-            },
-          },
-
-          "/auth/me/admin": {
-            get: {
-              tags: ["Me"],
-              summary: "Ruta protegida – solo admin",
-              description: "Requiere token con `role=admin` y `iss=JWT_ISS`.",
-              security: [{ bearerAuth: [] }],
-              responses: {
-                "200": {
-                  description: "OK admin",
-                  content: {
-                    "application/json": {
-                      schema: { $ref: "#/components/schemas/MeResponse" },
-                    },
-                  },
-                },
-                "401": { description: "No autenticado" },
-                "403": { description: "Prohibido (no admin)" },
-              },
-            },
-          },
-
-          "/auth/me/client": {
-            get: {
-              tags: ["Me"],
-              summary: "Ruta protegida – solo client",
-              description: "Requiere token con `role=client` y `aud=JWT_AUD`.",
-              security: [{ bearerAuth: [] }],
-              responses: {
-                "200": {
-                  description: "OK client",
-                  content: {
-                    "application/json": {
-                      schema: { $ref: "#/components/schemas/MeResponse" },
-                    },
-                  },
-                },
-                "401": { description: "No autenticado" },
-                "403": { description: "Prohibido (no client)" },
               },
             },
           },

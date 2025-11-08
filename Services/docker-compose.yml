@@ -125,7 +125,6 @@ services:
       - PORT=3001
       - AUTH_GRPC_URL=0.0.0.0:50050
       - AUTH_PROTO_PATH=/app/proto/auth.proto    # 👈 coincide con lo que copiamos
-      - JWT_SECRET=${JWT_SECRET:-changeme}
     ports: ["3001:3001"]
     expose:
       - "50050"
