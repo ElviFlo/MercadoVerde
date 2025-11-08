@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards, NotFoundException } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateCategoryUseCase } from '../../application/use-cases/create-category.usecase';
@@ -10,7 +10,7 @@ import { GetCategoryTreeUseCase } from '../../application/use-cases/get-category
 import { CreateCategoryDto } from '../dtos/create-category.dto';
 import { UpdateCategoryDto } from '../dtos/update-category.dto';
 
-@ApiTags('categories')
+@ApiTags('Categories')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('categories')
@@ -25,7 +25,7 @@ export class CategoriesController {
   ) {}
 
   @Post()
-  @ApiOperation({ summary: "Crear categoría", description: "Crea una nueva categoría en el sistema. Solo para administradores." })
+  @ApiOperation({ summary: "Crear categoría", description: "Gestión de categorías de productos. Permite listar, crear, modificar, eliminar y consultar categorías. Incluye jerarquía de categorías padre-hijo." })
   @ApiResponse({ status: 201, description: "Categoría creada exitosamente." })
   @ApiResponse({ status: 400, description: "Datos de entrada inválidos." })
   @ApiResponse({ status: 401, description: "No autorizado. Token JWT ausente o inválido." })
@@ -66,8 +66,10 @@ export class CategoriesController {
   @ApiResponse({ status: 200, description: "Categoría encontrada y retornada exitosamente." })
   @ApiResponse({ status: 401, description: "No autorizado. Token JWT ausente o inválido." })
   @ApiResponse({ status: 404, description: "Categoría no encontrada." })
-  getById(@Param('id') id: string) {
-    return this.getByIdUC.execute(id);
+  async getById(@Param('id') id: string) {
+    const result = await this.getByIdUC.execute(id);
+    if (!result) throw new NotFoundException('Categoría no encontrada');
+    return result;
   }
 
   @Put(':id')
