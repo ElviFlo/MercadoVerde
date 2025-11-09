@@ -17,9 +17,9 @@ async function bootstrap() {
     .setTitle('MercadoVerde - Cart API')
     .setDescription(
       'Microservicio de carrito de compras.\n\n' +
-        '- Todos los endpoints usan el usuario autenticado a partir del token JWT (claim `sub`).\n' +
-        '- Permite obtener el carrito actual, agregar productos, remover productos específicos y vaciar el carrito.\n' +
-        '- Requiere un token emitido por el servicio de Auth en el header `Authorization: Bearer <token>`.',
+        '- Aplica tanto para usuarios con rol **client** como **admin** autenticados.\n' +
+        '- Usa el `sub` del JWT emitido por el servicio de Auth para identificar al dueño del carrito.\n' +
+        '- Permite obtener el carrito actual, agregar productos, eliminar un producto específico o vaciar el carrito.',
     )
     .setVersion('1.0.0')
     .addBearerAuth(
@@ -30,6 +30,11 @@ async function bootstrap() {
         description: 'Token JWT emitido por el microservicio de Auth',
       },
       'bearerAuth',
+    )
+    .addTag(
+      'Cart',
+      'Operaciones sobre el carrito del usuario autenticado (client o admin). ' +
+        'Todas las operaciones usan el usuario del token JWT.',
     )
     .build();
 

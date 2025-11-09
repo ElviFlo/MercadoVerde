@@ -1,4 +1,3 @@
-// src/infrastructure/controllers/cart.controller.ts
 import {
   Body,
   Controller,
@@ -24,7 +23,7 @@ import {
 } from '@nestjs/swagger';
 import { AddToCartDto } from '../dto/add-to-cart.dto';
 
-@ApiTags('Cart')
+@ApiTags('Cart')                    // 👈 un solo tag
 @ApiBearerAuth('bearerAuth')
 @Controller('cart')
 @UseGuards(JwtAuthGuard)
@@ -36,11 +35,13 @@ export class CartController {
     private readonly clearCartUseCase: ClearCartUseCase,
   ) {}
 
+  // 1) GET /cart
   @Get()
   @ApiOperation({
     summary: 'Obtener carrito del usuario autenticado',
     description:
-      'Retorna el resumen del carrito asociado al usuario del token JWT (claim `sub`): items, cantidad total y subtotal.',
+      'Disponible para usuarios con rol **client** o **admin** autenticados. ' +
+      'Usa el `sub` del JWT para devolver items, cantidad total y subtotal.',
   })
   @ApiResponse({ status: 200, description: 'Carrito obtenido correctamente.' })
   @ApiResponse({ status: 401, description: 'Token ausente o inválido.' })
@@ -49,12 +50,12 @@ export class CartController {
     return this.getCartSummary.execute(userId);
   }
 
+  // 2) POST /cart/items
   @Post('items')
   @ApiOperation({
-    summary: 'Agregar producto al carrito (addItem)',
+    summary: 'Agregar producto al carrito',
     description:
-      'Agrega un producto al carrito del usuario autenticado. ' +
-      'Si el producto ya existe en el carrito, incrementa la cantidad. ' +
+      'Agrega o incrementa un producto en el carrito del usuario autenticado (client o admin). ' +
       'Valida con el microservicio de Products que el producto exista y esté activo.',
   })
   @ApiBody({ type: AddToCartDto })
@@ -62,11 +63,7 @@ export class CartController {
     status: 201,
     description: 'Item agregado o actualizado en el carrito.',
   })
-  @ApiResponse({
-    status: 400,
-    description:
-      'Datos inválidos (productId faltante, quantity <= 0 o producto inactivo).',
-  })
+  @ApiResponse({ status: 400, description: 'Datos inválidos.' })
   @ApiResponse({ status: 401, description: 'Token ausente o inválido.' })
   async addItem(@Body() body: AddToCartDto, @Req() req: any) {
     const userId = req.user?.sub;
@@ -80,21 +77,18 @@ export class CartController {
     });
   }
 
+  // 3) DELETE /cart/items/{productId}
   @Delete('items/:productId')
   @ApiOperation({
-    summary: 'Eliminar un producto del carrito (removeItem)',
+    summary: 'Eliminar un producto del carrito',
     description:
-      'Elimina del carrito el producto indicado por `productId` para el usuario autenticado. ' +
-      'Si el producto no existe, la operación no falla (idempotente).',
+      'Elimina del carrito del usuario autenticado el producto indicado por `productId`. ' +
+      'Operación idempotente: si el producto no está, no falla.',
   })
-  @ApiParam({
-    name: 'productId',
-    description: 'ID del producto a eliminar del carrito',
-  })
+  @ApiParam({ name: 'productId', description: 'ID del producto a eliminar' })
   @ApiResponse({
     status: 200,
-    description:
-      'Carrito actualizado después de eliminar el producto (o igual si no existía).',
+    description: 'Carrito actualizado después de eliminar el producto.',
   })
   @ApiResponse({ status: 401, description: 'Token ausente o inválido.' })
   async removeItem(@Param('productId') productId: string, @Req() req: any) {
@@ -103,12 +97,12 @@ export class CartController {
     return this.getCartSummary.execute(userId);
   }
 
+  // 4) DELETE /cart
   @Delete()
   @ApiOperation({
-    summary: 'Vaciar carrito (clear)',
+    summary: 'Vaciar carrito',
     description:
-      'Elimina todos los items del carrito del usuario autenticado. ' +
-      'Útil después de un checkout exitoso o cuando el usuario quiere empezar desde cero.',
+      'Elimina todos los items del carrito del usuario autenticado (client o admin).',
   })
   @ApiResponse({
     status: 200,
