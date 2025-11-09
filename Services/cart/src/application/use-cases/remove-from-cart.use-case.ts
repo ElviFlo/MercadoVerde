@@ -1,5 +1,9 @@
+// Services/cart/src/application/use-cases/remove-from-cart.use-case.ts
 import { Inject, Injectable, BadRequestException } from '@nestjs/common';
-import { CART_REPO, CartRepository } from '../../infrastructure/repositories/cart.repository';
+import {
+  CART_REPO,
+  CartRepository,
+} from '../../infrastructure/repositories/cart.repository';
 
 type RemoveInput = { userId: string; productId: string };
 
@@ -10,6 +14,7 @@ export class RemoveFromCartUseCase {
   async execute({ userId, productId }: RemoveInput) {
     if (!userId) throw new BadRequestException('userId requerido');
     if (!productId) throw new BadRequestException('productId requerido');
+
     await this.repo.removeItem(userId, productId);
     return { ok: true };
   }

@@ -172,43 +172,6 @@ export function setupSwagger(app: Application) {
               },
             },
           },
-
-          "/auth/login": {
-            post: {
-              tags: ["Auth"],
-              summary: "Login genérico (compatibilidad: emite token de cliente)",
-              requestBody: {
-                required: true,
-                content: {
-                  "application/json": {
-                    schema: { $ref: "#/components/schemas/LoginRequest" },
-                    // 👇 También ejemplos de cliente (nunca admin)
-                    examples: {
-                      byEmail: {
-                        summary: "Cliente por email",
-                        value: { email: "client@example.com", password: "123456" },
-                      },
-                      byName: {
-                        summary: "Cliente por name",
-                        value: { name: "clientuser", password: "123456" },
-                      },
-                    },
-                  },
-                },
-              },
-              responses: {
-                "200": {
-                  description: "Token de acceso (cliente)",
-                  content: {
-                    "application/json": {
-                      schema: { $ref: "#/components/schemas/AccessTokenResponse" },
-                    },
-                  },
-                },
-                "401": { description: "Credenciales inválidas" },
-              },
-            },
-          },
         },
       },
       apis: [],
