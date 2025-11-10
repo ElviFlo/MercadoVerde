@@ -25,6 +25,7 @@ async function bootstrap() {
     .setDescription('CRUD de categorías protegido con JWT')
     .setVersion('1.0.0')
     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
+    .addTag('Categories', 'Gestión de categorías de productos. Permite listar, crear, modificar, eliminar y consultar categorías.')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
