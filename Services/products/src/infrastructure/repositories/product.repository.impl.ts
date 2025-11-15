@@ -12,21 +12,27 @@ export class InMemoryProductRepository implements ProductRepository {
     const now = new Date();
 
     // Normaliza price si viene como string
-    const price = typeof data.price === "string" ? parseFloat(data.price) : data.price;
+    const price =
+      typeof data.price === "string" ? parseFloat(data.price) : data.price;
+
+    // Normaliza categoría: preferimos productCategoryId, pero aceptamos categoryId
+    const productCategoryId =
+      data.productCategoryId ?? data.categoryId ?? null;
 
     const product: Product = {
       id,
       name: data.name,
       description: data.description ?? null,
       price,
-      categoryId: data.categoryId ?? null,
+      // 👇 campo de categoría en el dominio
+      productCategoryId,
       createdBy: data.createdBy ?? "unknown",
       createdAt: now,
       updatedAt: now,
 
       // 👇 nuevos campos añadidos correctamente
       active: data.active ?? true,
-      stock: data.stock ?? 0
+      stock: data.stock ?? 0,
     };
 
     this.products.set(product.id, product);
@@ -35,7 +41,7 @@ export class InMemoryProductRepository implements ProductRepository {
 
   async findAll(): Promise<Product[]> {
     return Array.from(this.products.values()).sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
     );
   }
 

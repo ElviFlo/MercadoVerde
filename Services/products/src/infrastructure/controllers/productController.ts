@@ -29,16 +29,29 @@ export async function getById(req: Request, res: Response) {
 }
 
 export async function create(req: Request, res: Response) {
-  const body = req.body as Omit<CreateProductDTO, "createdBy">;
+  const body = req.body as Omit<CreateProductDTO, "createdBy"> & {
+    productCategoryId?: string | null;
+    categoryId?: string | null;
+  };
+
+  // Normalizamos el ID de categoría desde el body
+  const productCategoryId =
+    (body as any).productCategoryId ?? (body as any).categoryId ?? null;
+
   const dto: CreateProductDTO = {
     name: body.name,
     description: (body as any).description ?? null,
     price: (body as any).price,
-    categoryId: (body as any).categoryId ?? null,
+
+    // rellenamos ambos campos del DTO, pero internamente usaremos productCategoryId
+    productCategoryId,
+    categoryId: productCategoryId,
+
     createdBy: (req as any).user?.email ?? "unknown",
     active: (body as any).active,
     stock: (body as any).stock,
   };
+
   const created = await createUC.execute(dto);
   res.status(201).json(created);
 }
@@ -46,7 +59,19 @@ export async function create(req: Request, res: Response) {
 export async function update(req: Request, res: Response) {
   const id = req.params.id as string;
   const body = req.body as any;
-  const updated = await updateUC.execute({ id, ...body });
+
+  // Normalizar categoría también en update
+  const mapped: any = {
+    ...body,
+  };
+
+  if (mapped.productCategoryId == null && mapped.categoryId != null) {
+    mapped.productCategoryId = mapped.categoryId;
+  } else if (mapped.productCategoryId != null && mapped.categoryId == null) {
+    mapped.categoryId = mapped.productCategoryId;
+  }
+
+  const updated = await updateUC.execute({ id, ...mapped });
   if (!updated) return res.status(404).json({ message: "Product not found" });
   res.json(updated);
 }
@@ -61,11 +86,13 @@ export async function remove(req: Request, res: Response) {
 export async function reserve(req: Request, res: Response) {
   const id = req.params.id as string;
   const qty = Number(req.body?.quantity ?? 0);
-  if (!(qty > 0)) return res.status(400).json({ message: 'quantity inválido' });
+  if (!(qty > 0))
+    return res.status(400).json({ message: "quantity inválido" });
 
   const p = await getByIdUC.execute(id);
-  if (!p) return res.status(404).json({ message: 'Product not found' });
-  if ((p.stock ?? 0) < qty) return res.status(400).json({ message: 'stock insuficiente' });
+  if (!p) return res.status(404).json({ message: "Product not found" });
+  if ((p.stock ?? 0) < qty)
+    return res.status(400).json({ message: "stock insuficiente" });
 
   // Decrement stock
   const updated = await updateUC.execute({ id, stock: (p.stock ?? 0) - qty });
@@ -76,10 +103,11 @@ export async function reserve(req: Request, res: Response) {
 export async function release(req: Request, res: Response) {
   const id = req.params.id as string;
   const qty = Number(req.body?.quantity ?? 0);
-  if (!(qty > 0)) return res.status(400).json({ message: 'quantity inválido' });
+  if (!(qty > 0))
+    return res.status(400).json({ message: "quantity inválido" });
 
   const p = await getByIdUC.execute(id);
-  if (!p) return res.status(404).json({ message: 'Product not found' });
+  if (!p) return res.status(404).json({ message: "Product not found" });
 
   const updated = await updateUC.execute({ id, stock: (p.stock ?? 0) + qty });
   return res.json({ ok: true, remaining: updated?.stock ?? 0 });

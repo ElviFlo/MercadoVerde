@@ -31,6 +31,8 @@ export class CartRepositoryImpl implements CartRepository {
   ): Promise<CartItem> {
     const now = new Date();
 
+    const cartId = `cart-${userId}`;
+
     const existing = this.items.find(
       (i) => i.userId === userId && i.productId === productId,
     );
@@ -45,6 +47,7 @@ export class CartRepositoryImpl implements CartRepository {
 
     const item: CartItem = {
       id: crypto.randomUUID(),
+      cartId,
       userId,
       productId,
       quantity,
