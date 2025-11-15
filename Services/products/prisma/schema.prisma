@@ -13,9 +13,7 @@ model Product {
   description String?  @db.Text
   price       Decimal  @db.Decimal(10, 2)
 
-  /// ID de la categoría del producto (micro de categorías)
-  productCategoryId String? @map("category_id") @db.Text
-
+  categoryId String? @map("category_id") @db.Text
   active      Boolean  @default(true)
   stock       Int      @default(0)
 
@@ -24,5 +22,5 @@ model Product {
   updatedAt   DateTime @updatedAt           @map("updated_at")
 
   @@map("products") // ← la tabla real en Postgres
-  @@index([productCategoryId], map: "idx_products_category_id")
+  @@index([categoryId], map: "idx_products_category_id")
 }
