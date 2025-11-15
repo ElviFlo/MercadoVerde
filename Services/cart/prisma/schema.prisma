@@ -9,7 +9,6 @@ datasource db {
 
 model Cart {
   id        String     @id @default(cuid())
-  cartId    String     @unique @default(cuid())
   userId    String     @unique
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
@@ -22,8 +21,7 @@ model CartItem {
   productId String
   quantity  Int    @default(1)
 
-  cart Cart @relation(fields: [cartId], references: [cartId], onDelete: Cascade)
+  cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
 
   @@index([cartId])
-  @@unique([cartId, productId])
 }
