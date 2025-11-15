@@ -68,4 +68,22 @@ export class CartRepositoryImpl implements CartRepository {
   async clear(userId: string): Promise<void> {
     this.items = this.items.filter((i) => i.userId !== userId);
   }
+
+  // ✅ DECREMENT (usado por DecrementItemUseCase)
+  async decrementItem(userId: string, productId: string): Promise<void> {
+    const item = this.items.find(
+      (i) => i.userId === userId && i.productId === productId,
+    );
+
+    // Si no existe, la operación es idempotente: no hace nada.
+    if (!item) return;
+
+    // Regla de negocio: NO eliminar si está en 1, solo se deja igual.
+    if (item.quantity <= 1) {
+      return;
+    }
+
+    item.quantity -= 1;
+    item.updatedAt = new Date();
+  }
 }

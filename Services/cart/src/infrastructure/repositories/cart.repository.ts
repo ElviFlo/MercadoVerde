@@ -27,4 +27,9 @@ export interface CartRepository {
 
   // Usado por ClearCartUseCase
   clear(userId: string): Promise<void>;
+
+  // Usado por DecrementItemUseCase
+  // Disminuye en 1 la cantidad del producto en el carrito del usuario.
+  // Si la cantidad ya es 1, el item se mantiene y NO se elimina.
+  decrementItem(userId: string, productId: string): Promise<void>;
 }

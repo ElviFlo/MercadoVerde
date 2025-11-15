@@ -1,9 +1,11 @@
+// src/infrastructure/controllers/cart.controller.ts
 import {
   Body,
   Controller,
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -13,6 +15,7 @@ import { GetCartSummaryUseCase } from '../../application/use-cases/get-cart-summ
 import { AddToCartUseCase } from '../../application/use-cases/add-to-cart.use-case';
 import { RemoveFromCartUseCase } from '../../application/use-cases/remove-from-cart.use-case';
 import { ClearCartUseCase } from '../../application/use-cases/clear-cart.use-case';
+import { DecrementItemUseCase } from '../../application/use-cases/decrement-item.use-case';
 import {
   ApiBearerAuth,
   ApiTags,
@@ -23,7 +26,7 @@ import {
 } from '@nestjs/swagger';
 import { AddToCartDto } from '../dto/add-to-cart.dto';
 
-@ApiTags('Cart')                    // 👈 un solo tag
+@ApiTags('Cart')
 @ApiBearerAuth('bearerAuth')
 @Controller('cart')
 @UseGuards(JwtAuthGuard)
@@ -33,6 +36,7 @@ export class CartController {
     private readonly addToCart: AddToCartUseCase,
     private readonly removeFromCart: RemoveFromCartUseCase,
     private readonly clearCartUseCase: ClearCartUseCase,
+    private readonly decrementItemUseCase: DecrementItemUseCase,
   ) {}
 
   // 1) GET /cart
@@ -77,7 +81,30 @@ export class CartController {
     });
   }
 
-  // 3) DELETE /cart/items/{productId}
+  // 3) PATCH /cart/items/{productId}/decrement
+  @Patch('items/:productId/decrement')
+  @ApiOperation({
+    summary: 'Disminuir en 1 la cantidad de un producto en el carrito',
+    description:
+      'Disminuye en 1 la cantidad del producto indicado en el carrito del usuario autenticado. ' +
+      'Si la cantidad ya es 1, el item se mantiene y no se elimina. Pensado para flujo de client y admin.',
+  })
+  @ApiParam({ name: 'productId', description: 'ID del producto a decrementar' })
+  @ApiResponse({
+    status: 200,
+    description: 'Carrito actualizado después de decrementar el producto.',
+  })
+  @ApiResponse({ status: 401, description: 'Token ausente o inválido.' })
+  async decrementItem(@Param('productId') productId: string, @Req() req: any) {
+    const userId = req.user?.sub;
+
+    await this.decrementItemUseCase.execute({ userId, productId });
+
+    // devolvemos el resumen actualizado, igual que en remove
+    return this.getCartSummary.execute(userId);
+  }
+
+  // 4) DELETE /cart/items/{productId}
   @Delete('items/:productId')
   @ApiOperation({
     summary: 'Eliminar un producto del carrito',
@@ -97,7 +124,7 @@ export class CartController {
     return this.getCartSummary.execute(userId);
   }
 
-  // 4) DELETE /cart
+  // 5) DELETE /cart
   @Delete()
   @ApiOperation({
     summary: 'Vaciar carrito',

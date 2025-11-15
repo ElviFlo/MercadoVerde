@@ -8,6 +8,7 @@ import { GetCartSummaryUseCase } from './application/use-cases/get-cart-summary.
 import { AddToCartUseCase } from './application/use-cases/add-to-cart.use-case';
 import { RemoveFromCartUseCase } from './application/use-cases/remove-from-cart.use-case';
 import { ClearCartUseCase } from './application/use-cases/clear-cart.use-case';
+import { DecrementItemUseCase } from './application/use-cases/decrement-item.use-case';
 
 import { CART_REPO } from './infrastructure/repositories/cart.repository';
 import { CartRepositoryImpl } from './infrastructure/repositories/cart.repository.impl';
@@ -26,6 +27,7 @@ import { ProductsClient } from './infrastructure/clients/products.client';
     AddToCartUseCase,
     RemoveFromCartUseCase,
     ClearCartUseCase,
+    DecrementItemUseCase,
 
     // 🌐 Cliente HTTP a products_service
     ProductsClient,
