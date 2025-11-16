@@ -1,52 +1,41 @@
-import { Router, Request, Response } from "express";
-import { processCommand, auditRepository } from "../../application/use-cases/ProcessCommand";
-import { verifyAccessToken, requireAdmin } from "../middlewares/auth.middleware";
+// src/infrastructure/controllers/KoraController.ts
+import { Response } from "express";
+import { ProcessCommand } from "../../application/use-cases/ProcessCommand";
+import { AuthRequest } from "../middlewares/auth.middleware";
 
-const router = Router();
+export class KoraController {
+  private readonly processCommand: ProcessCommand;
 
-/**
- * POST /voice/command
- * Acceso: client o admin (JWT)
- * body: { text: string, userId?: string, confidence?: number, source?: string }
- */
-router.post("/command", verifyAccessToken, async (req: Request, res: Response) => {
-  const { text, confidence, source } = req.body ?? {};
-  if (!text || typeof text !== "string") {
-    return res.status(400).json({ message: "Se requiere 'text' con la transcripción." });
+  constructor() {
+    this.processCommand = new ProcessCommand();
   }
 
-  // El userId lo tomamos del token; si quieres permitir override, coméntalo.
-  const tokenUserId = (req as any).user?.sub as string | undefined;
+  async handleCommand(req: AuthRequest, res: Response): Promise<Response> {
+    try {
+      const { text } = req.body;
 
-  const result = await processCommand({
-    text,
-    userId: tokenUserId ?? null,
-    source: typeof source === "string" ? source : null,
-    confidence: typeof confidence === "number" ? confidence : null,
-  });
+      if (!text || text.trim() === "") {
+        return res
+          .status(400)
+          .json({ message: "No se recibió ningún comando." });
+      }
 
-  switch (result.status) {
-    case "ok":
-      return res.json({ status: "ok", message: result.message, productId: result.productId, quantity: result.quantity });
-    case "ambiguous":
-      return res.status(422).json({ status: "ambiguous", message: result.message, candidates: result.candidates ?? [] });
-    case "rejected":
-      return res.status(403).json({ status: "rejected", message: result.message });
-    case "needs_login":
-      return res.status(401).json({ status: "needs_login", message: result.message });
-    case "error":
-    default:
-      return res.status(500).json({ status: "error", message: result.message });
+      if (!req.token) {
+        // Si llegas aquí, algo falló en el middleware
+        return res
+          .status(401)
+          .json({ message: "No se encontró token de autenticación." });
+      }
+
+      // Pasamos el texto y el JWT crudo al use–case
+      const result = await this.processCommand.execute(text, req.token);
+
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error("❌ Error en KoraController:", error);
+      return res
+        .status(500)
+        .json({ message: "Error procesando el comando de voz." });
+    }
   }
-});
-
-/**
- * GET /voice/logs
- * Acceso: solo admin
- */
-// router.get("/logs", verifyAccessToken, requireAdmin, async (_req: Request, res: Response) => {
-//   const logs = await auditRepository.list();
-//   res.json(logs);
-// });
-
-export default router;
+}

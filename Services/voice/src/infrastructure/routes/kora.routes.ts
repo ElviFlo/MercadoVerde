@@ -1,6 +1,13 @@
 import { Router } from "express";
-import koraController from "../controllers/KoraController";
+import { KoraController } from "../controllers/KoraController";
+import { verifyAccessToken } from "../middlewares/auth.middleware";
 
 const router = Router();
-router.use("/", koraController);
+const controller = new KoraController();
+
+// Protegido con JWT
+router.post("/command", verifyAccessToken, (req, res) =>
+  controller.handleCommand(req, res)
+);
+
 export default router;

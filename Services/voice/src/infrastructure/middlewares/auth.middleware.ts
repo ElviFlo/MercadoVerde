@@ -8,30 +8,40 @@ function requireEnv(name: string): string {
 }
 
 const JWT_SECRET = requireEnv("JWT_SECRET");
-const JWT_ISS = process.env.JWT_ISS;
-const JWT_AUD = process.env.JWT_AUD;
-const JWT_ALG = (process.env.JWT_ALG ?? "HS256") as jwt.Algorithm;
 
-type JwtPayload =
-  | { sub?: string; id?: string; username?: string; role?: "admin" | "client"; [k: string]: any }
-  | string;
+export interface AuthRequest extends Request {
+  user?: JwtPayload | any;
+  token?: string; // 👈 aquí guardamos el JWT crudo (sin "Bearer ")
+}
 
-export function verifyAccessToken(req: Request, res: Response, next: NextFunction) {
-  const auth = req.headers.authorization || "";
-  const m = auth.match(/^Bearer\s+(.+)$/i);
-  const token = m?.[1];
-  if (!token) return res.status(401).json({ message: "Falta Bearer token" });
+export type JwtPayload = {
+  sub?: string;
+  id?: string;
+  username?: string;
+  role?: "admin" | "client";
+  [k: string]: any;
+};
+
+export function verifyAccessToken(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  const authHeader = req.headers.authorization || "";
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  const token = match?.[1];
+
+  if (!token) {
+    return res.status(401).json({ message: "Falta Bearer token" });
+  }
 
   try {
-    const payload = jwt.verify(token, JWT_SECRET, {
-      algorithms: [JWT_ALG],
-      issuer: JWT_ISS,
-      audience: JWT_AUD,
-      clockTolerance: 5,
-    }) as JwtPayload;
+    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
 
-    const userId = typeof payload === "string" ? undefined : (payload.sub || payload.id);
-    (req as any).user = { ...(typeof payload === "string" ? {} : payload), sub: userId };
+    const userId = payload.sub || payload.id;
+    req.user = { ...payload, sub: userId };
+    req.token = token; // 👈 guardar el JWT crudo para reenviarlo al Cart
+
     return next();
   } catch (e: any) {
     const code = e?.name === "TokenExpiredError" ? 401 : 403;
@@ -39,9 +49,14 @@ export function verifyAccessToken(req: Request, res: Response, next: NextFunctio
   }
 }
 
-export function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  const u = (req as any).user;
+export function requireAdmin(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  const u = req.user;
   if (!u) return res.status(401).json({ message: "No autenticado" });
-  if (u.role !== "admin") return res.status(403).json({ message: "Solo admin" });
+  if (u.role !== "admin")
+    return res.status(403).json({ message: "Solo admin" });
   return next();
 }
