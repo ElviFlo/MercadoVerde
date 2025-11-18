@@ -51,7 +51,7 @@ export function setupSwagger(app: Application) {
           post: {
             tags: ["Orders - Client"],
             security: [{ bearerAuth: [] }],
-            summary: "Crear orden (client)",
+            summary: "Crear orden",
             requestBody: {
               required: true,
               content: {
@@ -70,7 +70,7 @@ export function setupSwagger(app: Application) {
           get: {
             tags: ["Orders - Admin"],
             security: [{ bearerAuth: [] }],
-            summary: "Listar todas (admin)",
+            summary: "Listar todas",
             responses: {
               "200": { description: "OK" },
               "401": { description: "No autenticado" },
@@ -82,7 +82,7 @@ export function setupSwagger(app: Application) {
           get: {
             tags: ["Orders - Client"],
             security: [{ bearerAuth: [] }],
-            summary: "Listar mis órdenes (client)",
+            summary: "Listar mis órdenes",
             responses: {
               "200": { description: "OK" },
               "401": { description: "No autenticado" },
@@ -90,11 +90,32 @@ export function setupSwagger(app: Application) {
             },
           },
         },
-        "/orders/{id}": {
+        "/orders/mine/{id}": {
           get: {
             tags: ["Orders - Client"],
             security: [{ bearerAuth: [] }],
-            summary: "Detalle (admin o dueño)",
+            summary: "Detalle de mi orden",
+            parameters: [
+              {
+                name: "id",
+                in: "path",
+                required: true,
+                schema: { type: "integer" },
+              },
+            ],
+            responses: {
+              "200": { description: "OK" },
+              "401": { description: "No autenticado" },
+              "403": { description: "No autorizado" },
+              "404": { description: "No encontrada" },
+            },
+          },
+        },
+        "/orders/{id}": {
+          get: {
+            tags: ["Orders - Admin"],
+            security: [{ bearerAuth: [] }],
+            summary: "Detalle orden (admin)",
             parameters: [
               {
                 name: "id",

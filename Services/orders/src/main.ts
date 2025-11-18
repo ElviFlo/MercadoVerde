@@ -25,8 +25,8 @@ app.get("/health", (_req: Request, res: Response) => {
 // Swagger (público)
 setupSwagger(app); // expone /docs y /docs.json
 
-// 🔥 MONTA EL ROUTER DE ORDERS (sin prefijo extra)
-app.use(ordersRouter);
+// 🔥 MONTA EL ROUTER DE ORDERS con prefijo correcto
+app.use("/orders", ordersRouter);
 // Si quisieras /api/orders, sería: app.use("/api", ordersRouter);
 
 // 404

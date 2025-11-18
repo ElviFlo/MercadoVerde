@@ -18,10 +18,16 @@ router.get(
 );
 router.get("/", verifyAccessToken, requireAdmin, OrdersController.listAll);
 router.get(
+  "/mine/:id",
+  verifyAccessToken,
+  requireClient,
+  OrdersController.getByIdClient
+);
+router.get(
   "/:id",
   verifyAccessToken,
-  requireAdminOrOwner(),
-  OrdersController.getById,
+  requireAdmin,
+  OrdersController.getByIdAdmin
 );
 
 export default router;

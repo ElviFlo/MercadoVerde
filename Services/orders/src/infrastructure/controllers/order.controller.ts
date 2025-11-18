@@ -43,18 +43,21 @@ export const OrdersController = {
     return res.json(orders);
   },
 
-  // ADMIN o DUEÑO: detalle
-  async getById(req: Request, res: Response) {
-    const id = String(req.params.id); // Order.id es String (cuid)
+  // CLIENT: detalle de una orden propia
+  async getByIdClient(req: Request, res: Response) {
+    const id = String(req.params.id);
+    const u = (req as any).user!;
+    const order = await repo.getByUser(u.sub ?? u.id)
+      .then((orders)=>orders.find(o=>String(o.id)===id));
+    if (!order) return res.status(404).json({ message: "No encontrada o no autorizada" });
+    return res.json(order);
+  },
+
+  // ADMIN: detalle de cualquier orden
+  async getByIdAdmin(req: Request, res: Response) {
+    const id = String(req.params.id);
     const order = await repo.getById(id);
     if (!order) return res.status(404).json({ message: "No encontrada" });
-
-    const u = (req as any).user!;
-    const isAdmin = u.role === "admin";
-    const isOwner = String(order.userId) === String(u.sub ?? u.id);
-    if (!isAdmin && !isOwner)
-      return res.status(403).json({ message: "No autorizado" });
-
     return res.json(order);
   },
 };
