@@ -9,13 +9,9 @@ export default function Home() {
   return (
     <main className="flex flex-col justify-between">
       <Header />
-
       <Hero />
-
       <ProductsSection />
-
       <Testimonials />
-
       <Footer />
     </main>
   )
@@ -25,6 +21,6 @@ export { default as Cart } from "./cart";
 export { default as Catalogue } from "./catalogue";
 export { default as Login } from "./login";
 export { default as Orders } from "./orders";
-export { default as Products } from "./products";
+export { default as Product } from "./product.tsx";
 export { default as Signup } from "./signup";
 export { default as Thanks } from "./thanks";

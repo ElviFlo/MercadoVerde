@@ -1,14 +1,5 @@
-// src/App.tsx
 import { Routes, Route } from "react-router-dom";
-import Home, {
-  Cart,
-  Catalogue,
-  Login,
-  Orders,
-  Products,
-  Signup,
-  Thanks,
-} from "./Home";
+import Home, { Cart, Catalogue, Login, Orders, Product, Signup, Thanks } from "./Home";
 
 export default function App() {
   return (
@@ -18,7 +9,7 @@ export default function App() {
       <Route path="/catalogue" element={<Catalogue />} />
       <Route path="/login" element={<Login />} />
       <Route path="/orders" element={<Orders />} />
-      <Route path="/products" element={<Products />} />
+      <Route path="/product/:id" element={<Product />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/thanks" element={<Thanks />} />
     </Routes>
