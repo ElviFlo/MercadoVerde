@@ -10,7 +10,7 @@ import type { Product, ProductType as BaseProductType } from "./data/products";
 type ProductType = "all" | BaseProductType;
 type SortOption = "price-asc" | "price-desc" | "name-asc";
 
-const ITEMS_PER_PAGE = 12;
+const ITEMS_PER_PAGE = 15;
 
 export default function Catalogue() {
   const [search, setSearch] = useState("");
@@ -18,6 +18,34 @@ export default function Catalogue() {
   const [sortBy, setSortBy] = useState<SortOption>("price-asc");
   const [typeFilter, setTypeFilter] = useState<ProductType>("all");
   const [currentPage, setCurrentPage] = useState(1);
+
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  const [newProduct, setNewProduct] = useState<{
+      name: string;
+      price: string;
+      type: BaseProductType;
+      imageUrl: string;
+    }>({
+      name: "",
+      price: "",
+      type: "indoor",
+      imageUrl: "",
+    });
+
+  const handleCreateProductSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+     e.preventDefault();
+
+     console.log("Crear producto:", newProduct);
+
+     setNewProduct({
+       name: "",
+       price: "",
+       type: "indoor",
+       imageUrl: "",
+     });
+     setIsCreateModalOpen(false);
+   };
 
   const filteredProducts = useMemo(() => {
     let result: Product[] = PRODUCTS.filter((p) => {
@@ -44,7 +72,6 @@ export default function Catalogue() {
     return result;
   }, [search, maxPrice, sortBy, typeFilter]);
 
-  // 📄 Paginación
   const totalPages = Math.max(
     1,
     Math.ceil(filteredProducts.length / ITEMS_PER_PAGE),
@@ -67,99 +94,165 @@ export default function Catalogue() {
 
       <section className="flex-1 px-10 py-10">
         {/* Fila de filtros */}
-        <div className="grid grid-cols-3 items-center gap-6 mb-10 max-w-6xl mx-auto">
+        <div className="grid grid-cols-2 items-center gap-3 mb-10 max-w-6xl mx-auto">
           {/* Search */}
-          <div className="w-full">
+          <div className="w-full h-full">
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#666D68]">
                 <i className="ti ti-search"></i>
               </span>
-              <input
-                type="text"
-                placeholder="Search"
-                value={search}
+              <input type="text" placeholder="Search" value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full pl-10 pr-4 py-2 rounded-full bg-[#F0F1F0] text-sm text-slate-700 outline-none border border-transparent"
+                className="w-full pl-10 pr-4 py-2 rounded-full bg-[#EAEBEA] text-sm text-[#90A1B9] outline-none border border-transparent"
               />
             </div>
           </div>
 
           {/* Price range */}
-          <div className="w-full flex items-center gap-4 bg-[#F0F1F0] rounded-full px-4 py-2">
-            <span className="text-xs font-medium text-slate-500 whitespace-nowrap">
+          <div className="hidden w-full items-center gap-4 bg-[#EAEBEA] rounded-full px-4 py-2 h-full">
+            <span className="text-xs text-[#90A1B9] whitespace-nowrap">
               Price Range
             </span>
-            <span className="text-xs text-slate-400 whitespace-nowrap">$0</span>
-            <input
-              type="range"
-              min={0}
-              max={200}
-              step={1}
-              value={maxPrice}
+            {/*<span className="text-xs text-slate-400 whitespace-nowrap">$0</span>*/}
+            <input type="range" min={0} max={200} step={1} value={maxPrice}
               onChange={(e) => {
                 setMaxPrice(Number(e.target.value));
                 setCurrentPage(1);
               }}
               className="w-full accent-[#028414]"
             />
-            <span className="text-xs text-slate-400 whitespace-nowrap">
+            <span className="text-xs font-medium text-[#666D68] whitespace-nowrap">
               ${maxPrice}
             </span>
           </div>
 
           {/* Sort & Type */}
-          <div className="w-full flex gap-3">
+          <div className="w-full flex justify-evenly gap-3 h-full">
             {/* Sort by */}
-            <div className="flex items-center gap-2 bg-[#F0F1F0] rounded-full px-3 py-2">
-              <span className="text-xs text-slate-400">Sort by</span>
-              <select
-                value={sortBy}
-                onChange={(e) => {
-                  setSortBy(e.target.value as SortOption);
-                  setCurrentPage(1);
-                }}
-                className="bg-transparent text-xs font-semibold text-slate-600 outline-none cursor-pointer"
-              >
-                <option value="price-asc">Price</option>
+            <div className="flex items-center gap-2 bg-[#EAEBEA] rounded-full px-3 py-2">
+              <span className="text-xs text-[#90A1B9]">Sort</span>
+              <select value={sortBy} onChange={(e) => { setSortBy(e.target.value as SortOption); setCurrentPage(1);}}
+                className="bg-transparent text-xs font-semibold text-[#666D68] outline-none cursor-pointer">
+                <option value="price-asc">Price ↑</option>
                 <option value="price-desc">Price ↓</option>
                 <option value="name-asc">Name (A–Z)</option>
               </select>
             </div>
 
             {/* Type */}
-            <div className="flex items-center gap-2 bg-[#F0F1F0] rounded-full px-3 py-2">
-              <span className="text-xs text-slate-400">Type</span>
+            <div className="flex items-center gap-2 bg-[#EAEBEA] rounded-full px-3 py-2">
+              <span className="text-xs text-[#90A1B9]">Type</span>
               <select
                 value={typeFilter}
                 onChange={(e) => {
                   setTypeFilter(e.target.value as ProductType);
                   setCurrentPage(1);
                 }}
-                className="bg-transparent text-xs font-semibold text-slate-600 outline-none cursor-pointer"
+                className="bg-transparent text-xs font-semibold text-[#666D68] outline-none cursor-pointer"
               >
                 <option value="all">All</option>
                 <option value="indoor">Indoor</option>
                 <option value="outdoor">Outdoor</option>
                 <option value="succulent">Succulent</option>
+                <option value="cacti">Cactus</option>
+                <option value="aromatic">Aromatic</option>
+                <option value="flowering">Flowering</option>
               </select>
             </div>
+
+            {/* Crear Producto (Administrador) */}
+            <button onClick={() => setIsCreateModalOpen(true)} className="w-full flex items-center justify-center bg-[#53D15E] rounded-full h-full cursor-pointer hover:bg-[#33B13E] text-white text-sm font-medium transition-colors duration-200">
+              Create Product
+            </button>
+
+            {isCreateModalOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
+                  <button type="button" onClick={() => setIsCreateModalOpen(false)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors duration-200">
+                    <i className="ti ti-x" />
+                  </button>
+
+                  <h2 className="text-lg font-semibold text-slate-900 mb-1">
+                    Create Product
+                  </h2>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Fill the fields below to add a new product to the catalogue.
+                  </p>
+
+                  <form onSubmit={handleCreateProductSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">
+                        Name
+                      </label>
+                      <input type="text" required value={newProduct.name} onChange={(e) => setNewProduct((p) => ({ ...p, name: e.target.value }))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#028414] focus:border-transparent"/>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">
+                        Price (USD)
+                      </label>
+                      <input type="number" min={0} step="0.01" required value={newProduct.price}
+                        onChange={(e) =>
+                          setNewProduct((p) => ({ ...p, price: e.target.value }))
+                        }
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#028414] focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">
+                        Type
+                      </label>
+                      <select value={newProduct.type}
+                        onChange={(e) =>
+                          setNewProduct((p) => ({
+                            ...p,
+                            type: e.target.value as BaseProductType,
+                          }))
+                        }
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#028414] focus:border-transparent bg-white"
+                      >
+                        <option value="indoor">Indoor</option>
+                        <option value="outdoor">Outdoor</option>
+                        <option value="succulent">Succulent</option>
+                        <option value="cacti">Cactus</option>
+                        <option value="aromatic">Aromatic</option>
+                        <option value="flowering">Flowering</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">
+                        Image URL
+                      </label>
+                      <input type="text" placeholder="/plants/plant-13.png" value={newProduct.imageUrl} onChange={(e) => setNewProduct((p) => ({ ...p, imageUrl: e.target.value }))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#028414] focus:border-transparent"/>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-2">
+                      <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 text-xs font-medium text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors duration-200">
+                        Cancel
+                      </button>
+                      <button type="submit" className="px-4 py-2 text-xs font-medium text-white bg-[#53D15E] rounded-lg hover:bg-[#33B13E] cursor-pointer transition-colors duration-200">
+                        Create
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
           </div>
+
         </div>
 
         {/* Grid de productos: altura mínima fija */}
         <div className="mx-32">
-          <div className="grid gap-8 grid-cols-4 min-h-[680px]">
+          <div className="grid gap-8 grid-cols-5 min-h-[680px]">
             {paginatedProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                id={product.id}
-                name={product.name}
-                price={product.price}
-                imageUrl={product.imageUrl}
-              />
+              <ProductCard key={product.id} id={product.id} name={product.name} price={product.price} imageUrl={product.imageUrl}/>
             ))}
 
             {filteredProducts.length === 0 && (
@@ -173,11 +266,7 @@ export default function Catalogue() {
         {/* Paginación */}
         {filteredProducts.length >= 0 && (
           <div className="mt-10 flex items-center justify-center gap-4">
-            <button
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="px-2 py-1 text-sm rounded-full border border-slate-300 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100"
-            >
+            <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1} className="text-sm text-slate-600 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100">
               <i className="ti ti-chevron-left"></i>
             </button>
 
@@ -189,10 +278,10 @@ export default function Catalogue() {
                   <button
                     key={page}
                     onClick={() => goToPage(page)}
-                    className={`w-8 h-8 rounded-full text-sm font-medium ${
+                    className={`w-8 h-8 rounded-full text-sm font-medium cursor-pointer ${
                       isActive
-                        ? "bg-emerald-500 text-white"
-                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
+                        ? "bg-[#EAEBEA] text-text-[#666D68]"
+                        : "text-slate-700"
                     }`}
                   >
                     {page}
@@ -204,7 +293,7 @@ export default function Catalogue() {
             <button
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="px-2 py-1 text-sm rounded-full border border-slate-300 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100"
+              className="text-sm rounded-full text-slate-600 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100"
             >
               <i className="ti ti-chevron-right"></i>
             </button>

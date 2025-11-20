@@ -1,4 +1,4 @@
-export type ProductType = "indoor" | "outdoor" | "succulent";
+export type ProductType = "indoor" | "outdoor" | "succulent" | "cacti" | "aromatic" | "flowering";
 
 export type Product = {
   id: number;

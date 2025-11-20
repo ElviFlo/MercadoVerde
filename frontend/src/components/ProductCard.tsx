@@ -5,7 +5,7 @@ type ProductCardProps = { id: number; name: string; price: number; imageUrl: str
 export default function ProductCard({ id, name, price, imageUrl }: ProductCardProps) {
   return (
     <Link to={`/product/${id}`} className="block group">
-      <article className="bg-[#F4F6F8] rounded-2xl shadow-sm overflow-hidden flex flex-col">
+      <article className="bg-[#EAEBEA] rounded-2xl shadow-sm overflow-hidden flex flex-col">
         <div className="h-40 flex items-center justify-center">
           <img src={imageUrl} alt={name} className="h-36 object-contain"/>
         </div>

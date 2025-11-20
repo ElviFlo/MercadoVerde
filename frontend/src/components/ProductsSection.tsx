@@ -45,7 +45,7 @@ export default function ProductsSection() {
         </div>
 
         <div className="mt-12 flex justify-center">
-          <Link to="/catalogue" className="inline-flex items-center gap-2 text-emerald-600 font-semibold hover:text-emerald-700">
+          <Link to="/catalogue" className="inline-flex items-center gap-2 text-[#026910] font-semibold hover:text-[#329940] transition-colors duration-200">
             <span>Ver más</span>
             <i className="ti ti-chevron-right"></i>
           </Link>
