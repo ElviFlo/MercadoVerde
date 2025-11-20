@@ -52,7 +52,7 @@ export default function Header() {
             onClick={() => setIsUserMenuOpen((prev) => !prev)}
             className="rounded-full p-1 cursor-pointer hover:text-[#555] transition-colors duration-200"
           >
-            <i className="ti ti-user text-3xl"></i>
+            <i className="ti ti-user-circle text-3xl"></i>
           </button>
 
           {isUserMenuOpen && (

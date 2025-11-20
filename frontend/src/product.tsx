@@ -12,7 +12,6 @@ export default function Product() {
   const numericId = Number(id);
 
   const [quantity, setQuantity] = useState(1);
-  const [currentImage, setCurrentImage] = useState(0);
 
   const [isModifyModalOpen, setIsModifyModalOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<{ name: string; price: string; type: Product["type"]; imageUrl: string }>({
@@ -23,6 +22,16 @@ export default function Product() {
   });
 
   const product: Product | undefined = PRODUCTS.find((p) => p.id === numericId);
+
+  const ZOOMS = [
+    { label: "Full",    scale: 1.0, x: 0,  y: 0 },
+    { label: "Top",     scale: 2.0, x: 0,  y: -20 },
+    { label: "Bottom",  scale: 2.0, x: 0,  y: 20 },
+    { label: "Left",    scale: 2.0, x: -20, y: 0 },
+    { label: "Right",   scale: 5.0, x: 20, y: 0 },
+  ];
+
+  const [currentZoom, setCurrentZoom] = useState(0);
 
   if (!product) {
     return (
@@ -40,16 +49,6 @@ export default function Product() {
       </main>
     );
   }
-
-  const images: string[] = [product.imageUrl, product.imageUrl, product.imageUrl, product.imageUrl, product.imageUrl];
-
-  const handlePrevImage = () => {
-    setCurrentImage((prev) => (prev === 0 ? images.length - 1 : prev - 1));
-  };
-
-  const handleNextImage = () => {
-    setCurrentImage((prev) => (prev === images.length - 1 ? 0 : prev + 1));
-  };
 
   const handleModifySubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -137,37 +136,68 @@ export default function Product() {
 
         {/* Columna derecha */}
         <div className="w-1/2 flex flex-col items-center justify-center">
+          {/* contador + flechas */}
           <div className="w-full flex items-center justify-end gap-4 text-sm mb-4 text-slate-400">
-            <span className="font-semibold text-slate-700 mr-1">{String(currentImage + 1).padStart(2, "0")}</span>
-            <span>/ {String(images.length).padStart(2, "0")}</span>
+            <span className="font-semibold text-slate-700 mr-1">
+              {String(currentZoom + 1).padStart(2, "0")}
+            </span>
+            <span>/ {String(ZOOMS.length).padStart(2, "0")}</span>
 
             <div className="flex gap-2 ml-4">
-              <button type="button" onClick={handlePrevImage} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100">
-                <i className="ti ti-chevron-left text-xs text-slate-600 cursor-pointer" />
+              <button type="button" onClick={() => setCurrentZoom(z => (z === 0 ? ZOOMS.length - 1 : z - 1))} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 cursor-pointer transition-colors duration-200">
+                <i className="ti ti-chevron-left text-xs text-slate-600" />
               </button>
-              <button type="button" onClick={handleNextImage} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100">
-                <i className="ti ti-chevron-right text-xs text-slate-600 cursor-pointer" />
+              <button type="button" onClick={() => setCurrentZoom(z => (z === ZOOMS.length - 1 ? 0 : z + 1))} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 cursor-pointer transition-colors duration-200">
+                <i className="ti ti-chevron-right text-xs text-slate-600" />
               </button>
             </div>
           </div>
 
+          {/* imagen principal con zoom/crop */}
           <div className="w-full flex justify-center mb-6">
-            <div className="relative w-[380px] h-[380px] bg-[#F4FAF6] rounded-full flex items-center justify-center shadow-sm">
-              <img src={images[currentImage]} alt={product.name} className="h-[260px] object-contain" />
+            <div className="relative w-[380px] h-[380px] bg-[#F4FAF6] rounded-full flex items-center justify-center shadow-sm overflow-hidden">
+              <img
+                src={product.imageUrl}
+                alt={product.name}
+                className="h-[260px] object-contain transition-transform duration-300"
+                style={{
+                  transform: `scale(${ZOOMS[currentZoom].scale}) translate(${ZOOMS[currentZoom].x}%, ${ZOOMS[currentZoom].y}%)`,
+                  transformOrigin: "center",
+                }}
+              />
             </div>
           </div>
 
+          {/* thumbnails: mismos presets, misma imagen */}
           <div className="flex gap-4">
-            {images.map((img, index) => {
-              const isActive = index === currentImage;
+            {ZOOMS.map((zoom, index) => {
+              const isActive = index === currentZoom;
               return (
-                <button key={index} type="button" onClick={() => setCurrentImage(index)} className={`w-20 h-20 border rounded-xl flex items-center justify-center bg-white transition-shadow cursor-pointer ${isActive ? "border-emerald-500 shadow-sm" : "border-slate-200 hover:border-emerald-300"}`}>
-                  <img src={img} alt={`${product.name} thumbnail ${index + 1}`} className="h-14 object-contain" />
+                <button
+                  key={zoom.label}
+                  type="button"
+                  onClick={() => setCurrentZoom(index)}
+                  className={`w-20 h-20 border rounded-xl flex items-center justify-center bg-white transition-shadow cursor-pointer ${
+                    isActive ? "border-emerald-500 shadow-sm" : "border-slate-200 hover:border-emerald-300"
+                  }`}
+                >
+                  <div className="w-16 h-16 overflow-hidden rounded-lg bg-[#F4FAF6] flex items-center justify-center">
+                    <img
+                      src={product.imageUrl}
+                      alt={`${product.name} ${zoom.label}`}
+                      className="h-14 object-contain transition-transform duration-300"
+                      style={{
+                        transform: `scale(${zoom.scale}) translate(${zoom.x}%, ${zoom.y}%)`,
+                        transformOrigin: "center",
+                      }}
+                    />
+                  </div>
                 </button>
               );
             })}
           </div>
         </div>
+
       </section>
 
       {/* Modal de Modify (Administrador) */}
