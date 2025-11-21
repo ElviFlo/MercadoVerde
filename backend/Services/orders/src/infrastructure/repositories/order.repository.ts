@@ -9,12 +9,22 @@ type OrderItemInput = { productId: string; quantity: number };
 
 export class OrderRepository {
   async createOrder(
+    cartId: string,
     userId: string,
+    userName: string,
+    userEmail: string | undefined,
     items: OrderItemInput[],
     authHeader?: string
-  ) {
-    // Validar y armar items con nombre y precios desde Products Service
-    // (en paralelo para acelerar)
+   ) {
+
+    const cart = await prisma.cart.findUnique({
+      where: { id: cartId },
+    });
+
+    if (!cart || cart.userId !== userId) {
+      throw new Error(`Cart ${cartId} not found for user ${userId}`);
+    }
+
     const enriched = await Promise.all(
       items.map(async (i) => {
         const p = await fetchProduct(i.productId, authHeader);
@@ -36,7 +46,10 @@ export class OrderRepository {
     );
 
     const total = enriched.reduce((acc, it) => acc + Number(it.subtotal), 0);
-    // Reserve stock for each item (sequential to keep logic simple)
+    const totalItems = enriched.reduce(
+      (acc, it) => acc + Number(it.quantity),
+      0
+    );
     const reserved: Array<{ productId: string; quantity: number }> = [];
     try {
       for (const it of enriched) {
@@ -46,9 +59,12 @@ export class OrderRepository {
 
       const created = await prisma.order.create({
         data: {
+          cartId: cart.id,
           userId,
-          status: "PENDING",
+          userName: userName,
+          status: "PAID",
           total,
+          totalItems,
           items: { create: enriched },
         },
         include: { items: true },
@@ -56,19 +72,11 @@ export class OrderRepository {
 
       return created;
     } catch (e) {
-      // release any reservations on failure
       for (const r of reserved) {
         try { await releaseProduct(r.productId, r.quantity); } catch { /* best-effort */ }
       }
       throw e;
     }
-  }
-
-  async getById(id: string) {
-    return prisma.order.findUnique({
-      where: { id },
-      include: { items: true },
-    });
   }
 
   async getByUser(userId: string) {

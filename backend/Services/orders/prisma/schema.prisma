@@ -8,13 +8,17 @@ datasource db {
 }
 
 model Order {
-  id        String      @id @default(cuid())
-  userId    String
-  status    String      @default("PENDING")
-  total     Decimal     @db.Decimal(12, 2)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  items     OrderItem[]
+  id         String      @id @default(cuid())
+  cartId     String
+  userId     String
+  userName   String
+  status     String      @default("Paid")
+  total      Decimal     @db.Decimal(12, 2)
+  totalItems Int
+  createdAt  DateTime    @default(now())
+  items      OrderItem[]
+  @@index([cartId])
+  @@index([userId])
 }
 
 model OrderItem {
@@ -25,8 +29,6 @@ model OrderItem {
   unitPrice    Decimal @db.Decimal(10, 2)
   quantity     Int
   subtotal     Decimal @db.Decimal(12, 2)
-
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
   @@index([orderId])
 }

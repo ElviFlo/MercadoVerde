@@ -1,33 +1,27 @@
 import { Router } from "express";
-import { OrdersController } from "../controllers/order.controller";
+import { OrderController } from "../controllers/order.controller";
 import {
   verifyAccessToken,
   requireAdmin,
   requireClient,
-  requireAdminOrOwner,
 } from "../middlewares/auth.middleware";
 
-const router = Router();
+export const orderRoutes = (controller: OrderController) => {
+  const router = Router();
 
-router.post("/", verifyAccessToken, requireClient, OrdersController.create);
-router.get(
-  "/mine",
-  verifyAccessToken,
-  requireClient,
-  OrdersController.listMine,
-);
-router.get("/", verifyAccessToken, requireAdmin, OrdersController.listAll);
-router.get(
-  "/mine/:id",
-  verifyAccessToken,
-  requireClient,
-  OrdersController.getByIdClient
-);
-router.get(
-  "/:id",
-  verifyAccessToken,
-  requireAdmin,
-  OrdersController.getByIdAdmin
-);
+  router.post(
+    "/",
+    verifyAccessToken,
+    requireClient,
+    controller.create, 
+  );
 
-export default router;
+  router.get(
+    "/",
+    verifyAccessToken,
+    requireAdmin,
+    controller.getAll,
+  );
+
+  return router;
+};
