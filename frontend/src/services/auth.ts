@@ -1,45 +1,79 @@
 // src/services/auth.ts
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
-// ajusta el puerto /ruta según tu gateway
+const API_BASE = "http://localhost:3001/auth";
 
-type LoginPayload = {
-  email: string;
+export type LoginPayload = {
+  email?: string;
+  name?: string;
   password: string;
 };
 
-type SignupPayload = {
+export type LoginResponse = {
+  role: "admin" | "client";
+  accessToken: string;
+};
+
+export type SignupPayload = {
   name: string;
   email: string;
   password: string;
 };
 
-export async function loginApi(payload: LoginPayload) {
-  const res = await fetch(`${API_URL}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-    credentials: "include", // si usas cookies; quítalo si solo usas JWT en header
-  });
+type ErrorResponse = {
+  message?: string;
+};
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.message ?? "Login failed");
+// Utilidad para construir un Error a partir de la respuesta
+async function buildError(res: Response): Promise<Error> {
+  let body: unknown = null;
+
+  try {
+    body = await res.json();
+  } catch {
+    // puede no haber JSON, lo ignoramos
   }
 
-  return res.json(); // aquí normalmente viene { accessToken, user }
+  const data = body as ErrorResponse | null;
+  const msg = data?.message ?? `${res.status} ${res.statusText}`;
+  return new Error(msg);
 }
 
-export async function signupApi(payload: SignupPayload) {
-  const res = await fetch(`${API_URL}/auth/register`, {
+// Intenta login como admin y, si no, como cliente
+export async function loginApi(
+  payload: LoginPayload
+): Promise<LoginResponse> {
+  const options: RequestInit = {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  };
+
+  // 1) Intento admin
+  const adminRes = await fetch(`${API_BASE}/login/admin`, options);
+  if (adminRes.ok) {
+    return (await adminRes.json()) as LoginResponse;
+  }
+
+  // 2) Intento client (solo si fallo anterior no es por red)
+  const clientRes = await fetch(`${API_BASE}/login/client`, options);
+  if (clientRes.ok) {
+    return (await clientRes.json()) as LoginResponse;
+  }
+
+  throw await buildError(clientRes);
+}
+
+// Registro de usuario (cliente)
+export async function signupApi(payload: SignupPayload): Promise<void> {
+  const res = await fetch(`${API_BASE}/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.message ?? "Signup failed");
+  if (res.ok) {
+    // 201 Created, no hace falta devolver nada
+    return;
   }
 
-  return res.json();
+  throw await buildError(res);
 }

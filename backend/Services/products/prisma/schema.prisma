@@ -1,3 +1,5 @@
+// prisma/schema.prisma (products service)
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,19 +10,19 @@ datasource db {
 }
 
 model Product {
-  id          String   @id @default(uuid()) @db.Text
-  name        String   @db.Text
-  description String?  @db.Text
-  price       Decimal  @db.Decimal(10, 2)
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal
 
-  categoryId String? @map("category_id") @db.Text
+  categoryId  String?  @map("category_id")
   active      Boolean  @default(true)
   stock       Int      @default(0)
 
-  createdBy   String   @default("unknown")  @map("created_by") @db.Text
+  createdBy   String   @default("unknown")  @map("created_by")
   createdAt   DateTime @default(now())      @map("created_at")
   updatedAt   DateTime @updatedAt           @map("updated_at")
 
-  @@map("products") // ← la tabla real en Postgres
+  @@map("products")
   @@index([categoryId], map: "idx_products_category_id")
 }
