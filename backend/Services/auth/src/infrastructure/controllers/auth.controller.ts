@@ -35,29 +35,32 @@ export class AuthController {
    * Acepta email O name + password
    * BLOQUEA si el usuario es admin (no debe poder entrar aquí)
    */
-  static async login(req: Request, res: Response) {
-    try {
-      const { email, name, password } = req.body ?? {};
-      if ((!email && !name) || !password) {
-        return res
-          .status(400)
-          .json({ message: "Debes enviar email o name, y el password" });
-      }
+   static async login(req: Request, res: Response) {
+     try {
+       const { email, name, password } = req.body ?? {};
+       if ((!email && !name) || !password) {
+         return res
+           .status(400)
+           .json({ message: "Debes enviar email o name, y el password" });
+       }
 
-      const { role, token } = await loginUser.execute({ email, name }, password);
+       const { role, token } = await loginUser.execute({ email, name }, password);
 
-      // 🔒 Blindaje: este endpoint es SOLO para clientes
-      if (role !== "client") {
-        return res.status(403).json({ message: "Prohibido: solo client" });
-      }
+       // 👇 Normalizamos el rol
+       const normalizedRole = (role ?? "").toLowerCase();
 
-      return res.status(200).json({ role, accessToken: token });
-    } catch (e: any) {
-      return res
-        .status(401)
-        .json({ message: e?.message ?? "Credenciales inválidas" });
-    }
-  }
+       // 🔒 Blindaje: este endpoint es SOLO para clientes
+       if (normalizedRole !== "client") {
+         return res.status(403).json({ message: "Prohibido: solo client" });
+       }
+
+       return res.status(200).json({ role: normalizedRole, accessToken: token });
+     } catch (e: any) {
+       return res
+         .status(401)
+         .json({ message: e?.message ?? "Credenciales inválidas" });
+     }
+   }
 
   static async validate(req: Request, res: Response) {
     try {
