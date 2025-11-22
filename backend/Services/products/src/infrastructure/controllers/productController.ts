@@ -16,9 +16,25 @@ const createUC = new CreateProduct(repo as any);
 const updateUC = new UpdateProduct(repo as any);
 const deleteUC = new DeleteProduct(repo as any);
 
-export async function getAll(_req: Request, res: Response) {
+export async function getAll(req: Request, res: Response) {
+  const q = String(req.query.q ?? "").trim().toLowerCase();
+
+  // 1) Obtenemos todos los productos usando el use-case
   const products = await getAllUC.execute();
-  res.json(products);
+
+  // 2) Si no hay query, devolvemos todo igual que antes
+  if (!q) {
+    return res.json(products);
+  }
+
+  // 3) Si hay query, filtramos en memoria
+  const filtered = products.filter((p: any) => {
+    const name = (p.name ?? "").toLowerCase();
+    const desc = (p.description ?? "").toLowerCase();
+    return name.includes(q) || desc.includes(q);
+  });
+
+  return res.json(filtered);
 }
 
 export async function getById(req: Request, res: Response) {

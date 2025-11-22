@@ -8,13 +8,10 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// Rutas de Kora
 app.use("/api/kora", koraRoutes);
-
-// Swagger (monta /docs)
 setupSwagger(app);
 
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3006;
 app.listen(PORT, () => {
   console.log(`🎧 Voice service running on port ${PORT}`);
   console.log(`📚 Swagger docs en: http://localhost:${PORT}/docs`);

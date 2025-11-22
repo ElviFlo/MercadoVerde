@@ -224,6 +224,9 @@ services:
       - PORT=3006
       - VOICE_GRPC_URL=0.0.0.0:50055
       - AUTH_GRPC_URL=auth:50050
+      - PRODUCTS_URL=http://products:3003
+      - CART_URL=http://cart:3005
+
     ports: ["3006:3006"]
     expose:
       - "50055"
