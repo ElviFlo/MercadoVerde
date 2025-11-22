@@ -1,3 +1,5 @@
+// src/infrastructure/controllers/productController.ts
+
 import { Request, Response } from "express";
 
 import { GetAllProducts } from "../../application/use-cases/GetAllProducts";
@@ -6,15 +8,24 @@ import { CreateProduct } from "../../application/use-cases/CreateProduct";
 import { UpdateProduct } from "../../application/use-cases/UpdateProduct";
 import { DeleteProduct } from "../../application/use-cases/DeleteProduct";
 import { CreateProductDTO } from "../../application/dtos/CreateProductDTO";
-import { InMemoryProductRepository } from "../repositories/product.repository.impl";
 
-// Simple wiring for the demo: construct repo + use-cases here. In a real app you'd use DI.
-const repo = new InMemoryProductRepository();
-const getAllUC = new GetAllProducts(repo as any);
-const getByIdUC = new GetProductById(repo as any);
-const createUC = new CreateProduct(repo as any);
-const updateUC = new UpdateProduct(repo as any);
-const deleteUC = new DeleteProduct(repo as any);
+import { PrismaProductRepository } from "../repositories/product.repository";
+import { ProductRepository } from "../../domain/repositories/IProductRepository";
+
+// ========================
+// Instancias (repo real)
+// ========================
+const repo: ProductRepository = new PrismaProductRepository();
+
+const getAllUC = new GetAllProducts(repo);
+const getByIdUC = new GetProductById(repo);
+const createUC = new CreateProduct(repo);
+const updateUC = new UpdateProduct(repo);
+const deleteUC = new DeleteProduct(repo);
+
+// ========================
+// Handlers
+// ========================
 
 export async function getAll(req: Request, res: Response) {
   const q = String(req.query.q ?? "").trim().toLowerCase();
@@ -22,12 +33,12 @@ export async function getAll(req: Request, res: Response) {
   // 1) Obtenemos todos los productos usando el use-case
   const products = await getAllUC.execute();
 
-  // 2) Si no hay query, devolvemos todo igual que antes
+  // 2) Si no hay query, devolvemos todo
   if (!q) {
     return res.json(products);
   }
 
-  // 3) Si hay query, filtramos en memoria
+  // 3) Filtro simple en memoria por nombre o descripción
   const filtered = products.filter((p: any) => {
     const name = (p.name ?? "").toLowerCase();
     const desc = (p.description ?? "").toLowerCase();
@@ -94,9 +105,23 @@ export async function update(req: Request, res: Response) {
 
 export async function remove(req: Request, res: Response) {
   const id = req.params.id as string;
-  const ok = await deleteUC.execute(id);
-  res.json({ ok });
+
+  try {
+    const deleted = await deleteUC.execute(id);
+
+    if (!deleted) {
+      // producto no existe -> 404
+      return res.status(404).json({ message: "Producto no encontrado" });
+    }
+
+    // se eliminó correctamente -> 204 (sin body)
+    return res.status(200).send();
+  } catch (err) {
+    console.error("Error eliminando producto:", err);
+    return res.status(500).json({ message: "Error eliminando producto" });
+  }
 }
+
 
 // POST /products/:id/reserve  { quantity }
 export async function reserve(req: Request, res: Response) {

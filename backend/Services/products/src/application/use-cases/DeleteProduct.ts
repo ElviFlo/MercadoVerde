@@ -1,11 +1,23 @@
+// src/application/use-cases/DeleteProduct.ts
 import { ProductRepository } from "../../domain/repositories/IProductRepository";
 
-export class DeleteProduct{
+export class DeleteProduct {
   constructor(private productRepository: ProductRepository) {}
 
-  async execute(id: string): Promise<void> {
+  /**
+   * Devuelve:
+   *  - true  -> se eliminó
+   *  - false -> no existía
+   */
+  async execute(id: string): Promise<boolean> {
     const existing = await this.productRepository.findById(id);
-    if (!existing) throw new Error("Producto no encontrado");
+
+    if (!existing) {
+      // no lanzamos error, solo indicamos que no se encontró
+      return false;
+    }
+
     await this.productRepository.delete(id);
+    return true;
   }
 }

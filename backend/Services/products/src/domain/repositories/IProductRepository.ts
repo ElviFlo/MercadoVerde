@@ -1,6 +1,11 @@
-import { CreateProductDTO, Product, UpdateProductDTO } from "../entities/Product";
+// src/domain/repositories/IProductRepository.ts
 
-// Repository interface for products. Implementations live under infrastructure/repositories
+import {
+  CreateProductDTO,
+  Product,
+  UpdateProductDTO,
+} from "../entities/Product";
+
 export interface ProductRepository {
   create(data: CreateProductDTO): Promise<Product>;
   findAll(): Promise<Product[]>;
