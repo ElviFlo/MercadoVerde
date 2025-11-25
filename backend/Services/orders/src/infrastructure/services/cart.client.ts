@@ -1,46 +1,64 @@
+// src/infrastructure/services/cart.client.ts
 import axios from "axios";
 
-export interface CartProduct {
-  id: string;
-  name: string;
-  price: number;
-}
-
 export interface CartItem {
+  id: string;
   productId: string;
+  nameSnapshot: string;
+  unitPrice: number;
   quantity: number;
-  product: CartProduct;
   subtotal: number;
 }
 
 export interface CartResponse {
-  id: string;
-  userId: string;
   items: CartItem[];
   total: number;
   totalItems: number;
 }
 
-/**
- * Servicio HTTP para hablar con el microservicio de Cart
- */
 export class CartService {
   private readonly baseUrl: string;
 
   constructor() {
-    // Usa la env del docker-compose de orders
     this.baseUrl = process.env.CART_URL || "http://cart:3005";
   }
 
-  // 👇 Siempre trae el carrito del usuario del token,
-  // no recibe cartId.
   async getMyCart(authHeader: string): Promise<CartResponse> {
-    const { data } = await axios.get<CartResponse>(
+    const { data } = await axios.get(
       `${this.baseUrl}/cart`,
-      {
-        headers: { Authorization: authHeader },
-      }
+      { headers: { Authorization: authHeader } }
     );
-    return data;
+
+    const raw = (data as any).cart ?? data;
+
+    const items: CartItem[] = (raw.items ?? []).map((it: any) => {
+      const quantity = Number(it.quantity ?? 0);
+      const unitPrice = Number(it.price ?? 0);
+      const subtotal = unitPrice * quantity;
+
+      return {
+        id: String(it.id ?? ""),
+        productId: String(it.productId ?? ""),
+        // Por ahora no tienes nombre de producto aquí, así que guardamos algo neutro
+        nameSnapshot: `Producto ${it.productId ?? ""}`,
+        unitPrice,
+        quantity,
+        subtotal,
+      };
+    });
+
+    const total = Number(
+      raw.total ??
+      raw.subtotal ??
+      items.reduce((sum, it) => sum + it.subtotal, 0),
+    );
+
+    const totalItems = Number(
+      raw.totalItems ??
+      raw.count ??
+      items.reduce((sum, it) => sum + it.quantity, 0),
+    );
+
+    return { items, total, totalItems };
   }
 }

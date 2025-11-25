@@ -1,7 +1,9 @@
+// src/application/use-cases/create-order.use-case.ts
 import { OrderRepository } from "../../infrastructure/repositories/order.repository";
 import { CartService } from "../../infrastructure/services/cart.client";
 
 export interface CreateOrderInput {
+  cartId: string;
   userId: string;
   userName: string;
   userEmail?: string;
@@ -15,35 +17,33 @@ export class CreateOrder {
   ) {}
 
   async execute(input: CreateOrderInput) {
-    const { userId, userName, userEmail, authHeader } = input;
+    const { cartId, userId, userName, userEmail, authHeader } = input;
 
     if (!authHeader) {
       throw new Error("Falta header Authorization");
     }
 
-    // 👇 Llamamos al microservicio de cart
     const cart = await this.cartService.getMyCart(authHeader);
 
-    console.log("[CreateOrder] userId del token:", userId);
-    console.log("[CreateOrder] cart.userId:", cart?.userId);
-
-    if (!cart || cart.userId !== userId) {
-      throw new Error("Carrito no encontrado para este usuario");
+    if (!cart) throw new Error("Carrito no encontrado");
+    if (!cart.items || cart.items.length === 0) {
+      throw new Error("El carrito está vacío");
     }
 
-    // Mapear items del carrito a items de la orden
     const items = cart.items.map((it) => ({
       productId: it.productId,
+      nameSnapshot: it.nameSnapshot,
+      unitPrice: it.unitPrice,
       quantity: it.quantity,
+      subtotal: it.subtotal,
     }));
 
     const created = await this.orderRepo.createOrder(
-      cart.id,      // 👈 aquí usamos EL cartId del carrito
+      cartId,
       userId,
       userName,
       userEmail,
       items,
-      authHeader,
     );
 
     return created;

@@ -14,8 +14,6 @@ model Product {
   name        String
   description String?
   price       Decimal
-
-  // 👇 NUEVOS CAMPOS
   type        String   @map("type") // tipo de producto (plant, tool, etc.)
   imageUrl    String   @default("/plants/plant-placeholder.png") @map("image_url")
 
