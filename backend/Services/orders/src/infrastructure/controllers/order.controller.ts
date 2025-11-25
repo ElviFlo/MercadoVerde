@@ -1,39 +1,78 @@
-import { Request, Response } from 'express';
-import { CreateOrderUseCase } from '../../application/use-cases/create-order.use-case';
-import { GetAllOrdersUseCase } from '../../application/use-cases/get-orders.use-case';
+import { Request, Response } from "express";
+import { CreateOrder } from "../../application/use-cases/create-order.use-case";
+import { OrderRepository } from "../repositories/order.repository";
+import { CartService } from "../services/cart.client";
 
-export class OrderController {
-  constructor(
-    private readonly createOrderUseCase: CreateOrderUseCase,
-    private readonly getOrdersUseCase: GetAllOrdersUseCase,
-  ) {}
+const orderRepository = new OrderRepository();
+const cartService = new CartService();
+const createOrderUC = new CreateOrder(orderRepository, cartService);
 
-  // POST /orders
-  create = async (req: Request, res: Response) => {
+export class OrdersController {
+  // 📌 Crear orden (cliente)
+  async create(req: Request, res: Response) {
     try {
-      const { cartId } = req.body;
-
-      if (!cartId) {
-        return res.status(400).json({ message: 'cartId is required' });
+      const u = (req as any).user;
+      if (!u) {
+        return res.status(401).json({ message: "No autenticado" });
       }
 
-      const user = (req as any).user;
-      const userName = user?.name;
+      const authHeader = req.headers.authorization as string | undefined;
+      if (!authHeader) {
+        return res
+          .status(401)
+          .json({ message: "Falta header Authorization" });
+      }
 
-      const order = await this.createOrderUseCase.execute({
-        cartId,
+      const userId = String(u.sub ?? u.id);
+      const userName = String(u.name ?? "");
+      const userEmail = u.email as string | undefined;
+
+      const order = await createOrderUC.execute({
+        userId,
         userName,
+        userEmail,
+        authHeader,
       });
 
       return res.status(201).json(order);
-    } catch (e) {
-      console.error(e);
-      return res.status(500).json({ message: (e as Error).message });
+    } catch (err: any) {
+      console.error("[OrdersController.create] error:", err?.message);
+      return res.status(500).json({
+        message: "Error creando la orden",
+        error: err?.message,
+      });
     }
-  };
+  }
 
-  getAll = async (_req: Request, res: Response) => {
-    const orders = await this.getOrdersUseCase.execute();
-    return res.json(orders);
-  };
+  async getMine(req: Request, res: Response) {
+    try {
+      const u = (req as any).user;
+      if (!u) {
+        return res.status(401).json({ message: "No autenticado" });
+      }
+
+      const userId = String(u.sub ?? u.id);
+      const orders = await orderRepository.getByUser(userId);
+      return res.status(200).json(orders);
+    } catch (err: any) {
+      console.error("[OrdersController.getMine] error:", err?.message);
+      return res.status(500).json({
+        message: "Error listando tus órdenes",
+        error: err?.message,
+      });
+    }
+  }
+
+  async getAll(_req: Request, res: Response) {
+    try {
+      const orders = await orderRepository.listAll();
+      return res.status(200).json(orders);
+    } catch (err: any) {
+      console.error("[OrdersController.getAll] error:", err?.message);
+      return res.status(500).json({
+        message: "Error listando órdenes",
+        error: err?.message,
+      });
+    }
+  }
 }

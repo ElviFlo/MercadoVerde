@@ -1,150 +1,156 @@
-import type { Application, Request, Response } from "express";
-import * as swaggerUi from "swagger-ui-express";
-// usa require con any para evitar tipos
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const swaggerJsdoc: any = require("swagger-jsdoc");
+// src/infrastructure/swagger/order.swagger.ts
+import { Express } from "express";
+import swaggerUi from "swagger-ui-express";
 
-export function setupSwagger(app: Application) {
-  const PORT = process.env.PORT ?? "3002";
-  const HOST = process.env.SWAGGER_HOST ?? "http://localhost";
-
-  const options: any = {
-    definition: {
-      openapi: "3.0.3",
-      info: {
-        title: "MercadoVerde - Orders API",
-        version: "1.0.0",
-        description:
-          "Crear/listar propias: **client**. Ver todas: **admin**. Detalle: **admin o dueño**.",
+export function setupSwagger(app: Express) {
+  const swaggerDoc = {
+    openapi: "3.0.0",
+    info: {
+      title: "MercadoVerde - Orders API",
+      version: "1.0.0",
+      description:
+        "Crear y listar órdenes. Cliente: crea y ve sus órdenes. Admin: lista todas las órdenes.",
+    },
+    servers: [
+      {
+        url: "http://localhost:3002",
       },
-      servers: [{ url: `${HOST}:${PORT}` }],
-      components: {
-        securitySchemes: {
-          bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
-        },
-        schemas: {
-          CreateOrderRequest: {
-            type: "object",
-            required: ["items"],
-            properties: {
-              items: {
-                type: "array",
-                items: {
-                  type: "object",
-                  required: ["productId", "quantity"],
-                  properties: {
-                    productId: { type: "integer", example: 1 },
-                    quantity: { type: "integer", example: 2 },
-                  },
-                },
-              },
-            },
-          },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
         },
       },
-      tags: [
-        { name: "Orders - Client", description: "Acciones de cliente" },
-        { name: "Orders - Admin", description: "Acciones administrativas" },
-      ],
-      paths: {
-        "/orders": {
-          post: {
-            tags: ["Orders - Client"],
-            security: [{ bearerAuth: [] }],
-            summary: "Crear orden",
-            requestBody: {
-              required: true,
-              content: {
-                "application/json": {
-                  schema: { $ref: "#/components/schemas/CreateOrderRequest" },
-                },
-              },
-            },
-            responses: {
-              "201": { description: "Creada" },
-              "400": { description: "Body inválido" },
-              "401": { description: "No autenticado" },
-              "403": { description: "Requiere rol client" },
+      schemas: {
+        CreateOrderRequest: {
+          type: "object",
+          properties: {
+            cartId: {
+              type: "string",
+              example: "cuid_cart_123",
             },
           },
-          get: {
-            tags: ["Orders - Admin"],
-            security: [{ bearerAuth: [] }],
-            summary: "Listar todas",
-            responses: {
-              "200": { description: "OK" },
-              "401": { description: "No autenticado" },
-              "403": { description: "Requiere rol admin" },
-            },
+          required: ["cartId"],
+        },
+        OrderItem: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            productId: { type: "string" },
+            nameSnapshot: { type: "string" },
+            unitPrice: { type: "number", format: "double" },
+            quantity: { type: "integer" },
+            subtotal: { type: "number", format: "double" },
           },
         },
-        "/orders/mine": {
-          get: {
-            tags: ["Orders - Client"],
-            security: [{ bearerAuth: [] }],
-            summary: "Listar mis órdenes",
-            responses: {
-              "200": { description: "OK" },
-              "401": { description: "No autenticado" },
-              "403": { description: "Requiere rol client" },
-            },
-          },
-        },
-        "/orders/mine/{id}": {
-          get: {
-            tags: ["Orders - Client"],
-            security: [{ bearerAuth: [] }],
-            summary: "Detalle de mi orden",
-            parameters: [
-              {
-                name: "id",
-                in: "path",
-                required: true,
-                schema: { type: "integer" },
-              },
-            ],
-            responses: {
-              "200": { description: "OK" },
-              "401": { description: "No autenticado" },
-              "403": { description: "No autorizado" },
-              "404": { description: "No encontrada" },
-            },
-          },
-        },
-        "/orders/{id}": {
-          get: {
-            tags: ["Orders - Admin"],
-            security: [{ bearerAuth: [] }],
-            summary: "Detalle orden (admin)",
-            parameters: [
-              {
-                name: "id",
-                in: "path",
-                required: true,
-                schema: { type: "integer" },
-              },
-            ],
-            responses: {
-              "200": { description: "OK" },
-              "401": { description: "No autenticado" },
-              "403": { description: "No autorizado" },
-              "404": { description: "No encontrada" },
+        Order: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            cartId: { type: "string" },
+            userId: { type: "string" },
+            userName: { type: "string" },
+            status: { type: "string", example: "PAID" },
+            total: { type: "number", format: "double" },
+            totalItems: { type: "integer" },
+            createdAt: { type: "string", format: "date-time" },
+            items: {
+              type: "array",
+              items: { $ref: "#/components/schemas/OrderItem" },
             },
           },
         },
       },
     },
-    apis: [],
+    tags: [
+      {
+        name: "Orders - Client",
+        description: "Acciones de cliente",
+      },
+      {
+        name: "Orders - Admin",
+        description: "Acciones administrativas",
+      },
+    ],
+    paths: {
+      "/orders": {
+        post: {
+          tags: ["Orders - Client"],
+          summary: "Crear orden",
+          description:
+            "Crea una orden a partir de un carrito existente del usuario autenticado.",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/CreateOrderRequest" },
+              },
+            },
+          },
+          responses: {
+            "201": {
+              description: "Orden creada",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/Order" },
+                },
+              },
+            },
+            "400": { description: "cartId requerido o inválido" },
+            "401": { description: "No autenticado" },
+            "500": { description: "Error creando la orden" },
+          },
+        },
+        get: {
+          tags: ["Orders - Admin"],
+          summary: "Listar todas las órdenes",
+          description: "Lista todas las órdenes. Solo admin.",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            "200": {
+              description: "Listado de órdenes",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "array",
+                    items: { $ref: "#/components/schemas/Order" },
+                  },
+                },
+              },
+            },
+            "401": { description: "No autenticado" },
+            "403": { description: "No autorizado (se requiere admin)" },
+          },
+        },
+      },
+      "/orders/mine": {
+        get: {
+          tags: ["Orders - Client"],
+          summary: "Listar mis órdenes",
+          description: "Lista todas las órdenes del usuario autenticado.",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            "200": {
+              description: "Listado de órdenes propias",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "array",
+                    items: { $ref: "#/components/schemas/Order" },
+                  },
+                },
+              },
+            },
+            "401": { description: "No autenticado" },
+          },
+        },
+      },
+    },
   };
 
-  const spec = swaggerJsdoc(options);
-  app.get("/docs.json", (_req: Request, res: Response) => res.json(spec));
-  app.use(
-    "/docs",
-    swaggerUi.serve,
-    swaggerUi.setup(spec, {
-      explorer: true,
-      swaggerOptions: { persistAuthorization: true },
-    }),
-  );
+  app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc));
 }

@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from "axios";
 
 export interface CartProduct {
   id: string;
@@ -21,16 +21,25 @@ export interface CartResponse {
   totalItems: number;
 }
 
-export class CartClient {
+/**
+ * Servicio HTTP para hablar con el microservicio de Cart
+ */
+export class CartService {
   private readonly baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.CART_SERVICE_URL || 'http://cart:3004';
+    // Usa la env del docker-compose de orders
+    this.baseUrl = process.env.CART_URL || "http://cart:3005";
   }
 
-  async getCartById(cartId: string): Promise<CartResponse> {
+  // 👇 Siempre trae el carrito del usuario del token,
+  // no recibe cartId.
+  async getMyCart(authHeader: string): Promise<CartResponse> {
     const { data } = await axios.get<CartResponse>(
-      `${this.baseUrl}/cart/${cartId}`,
+      `${this.baseUrl}/cart`,
+      {
+        headers: { Authorization: authHeader },
+      }
     );
     return data;
   }

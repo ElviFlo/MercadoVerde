@@ -1,55 +1,51 @@
-import { IOrderRepository } from '../../domain/repositories/order.repository';
-import { Order } from '../../domain/entities/order.entity';
-import { OrderItem } from '../../domain/entities/order-item.entity';
-import { CartClient } from '../../infrastructure/services/cart.client';
+import { OrderRepository } from "../../infrastructure/repositories/order.repository";
+import { CartService } from "../../infrastructure/services/cart.client";
 
-const randomId = () => Math.random().toString(36).slice(2);
-
-interface CreateOrderDTO {
-  cartId: string;
+export interface CreateOrderInput {
+  userId: string;
   userName: string;
+  userEmail?: string;
+  authHeader: string;
 }
 
-export class CreateOrderUseCase {
+export class CreateOrder {
   constructor(
-    private readonly orderRepository: IOrderRepository,
-    private readonly cartClient: CartClient,
+    private readonly orderRepo: OrderRepository,
+    private readonly cartService: CartService,
   ) {}
 
-  async execute({ cartId, userName }: CreateOrderDTO): Promise<Order> {
-    const cart = await this.cartClient.getCartById(cartId);
+  async execute(input: CreateOrderInput) {
+    const { userId, userName, userEmail, authHeader } = input;
 
-    if (!cart) {
-      throw new Error(`Cart with id ${cartId} not found`);
+    if (!authHeader) {
+      throw new Error("Falta header Authorization");
     }
 
-    const items = cart.items.map(
-      (i) =>
-        new OrderItem(
-          i.product.id,
-          i.product.name,
-          i.product.price,
-          i.quantity,
-        ),
-    );
+    // 👇 Llamamos al microservicio de cart
+    const cart = await this.cartService.getMyCart(authHeader);
 
-    const total = cart.total;
-    const totalItems = cart.totalItems;
+    console.log("[CreateOrder] userId del token:", userId);
+    console.log("[CreateOrder] cart.userId:", cart?.userId);
 
-    const order = new Order(
-      `order_${randomId()}`,
-      cart.id,
-      {
-        id: cart.userId,
-        name: userName ?? 'Unknown',
-      },
+    if (!cart || cart.userId !== userId) {
+      throw new Error("Carrito no encontrado para este usuario");
+    }
+
+    // Mapear items del carrito a items de la orden
+    const items = cart.items.map((it) => ({
+      productId: it.productId,
+      quantity: it.quantity,
+    }));
+
+    const created = await this.orderRepo.createOrder(
+      cart.id,      // 👈 aquí usamos EL cartId del carrito
+      userId,
+      userName,
+      userEmail,
       items,
-      total,
-      totalItems,
-      'PAID',
-      new Date(),
+      authHeader,
     );
 
-    return this.orderRepository.create(order);
+    return created;
   }
 }
