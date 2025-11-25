@@ -1,42 +1,65 @@
-import { useState } from "react";
+// src/cart.tsx
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import CartItem from "./components/cartItem";
 
-type CartItemData = {
-  id: number;
-  name: string;
-  type: string;
-  price: number;
-  quantity: number;
-  imageUrl: string;
-};
+import {
+  getCartItems,
+  setCartItems,
+  type CartItemData,
+} from "./cartStorage";
 
-const INITIAL_CART: CartItemData[] = [
-  {
-    id: 1,
-    name: "Snake Plant",
-    type: "Indoor",
-    price: 149.99,
-    quantity: 1,
-    imageUrl: "/plants/plant.png",
-  },
-  {
-    id: 2,
-    name: "Boston Fern",
-    type: "Air-Purifying",
-    price: 169.99,
-    quantity: 1,
-    imageUrl: "/plants/plant.png",
-  },
-];
+import { createOrderFromCartId } from "./api/orders";
+
+function getNameFromToken(): string | null {
+  const token = localStorage.getItem("accessToken");
+  if (!token) return null;
+
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+
+    const payloadBase64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = payloadBase64.padEnd(
+      Math.ceil(payloadBase64.length / 4) * 4,
+      "=",
+    );
+    const json = atob(padded);
+    const payload = JSON.parse(json) as {
+      name?: string;
+      email?: string;
+    };
+
+    return payload.name ?? payload.email ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function getCartIdFromStorage(): string | null {
+  // 👇 Ajusta la key si en tu proyecto usas otra
+  return localStorage.getItem("mv_cart_id");
+}
 
 export default function Cart() {
   const navigate = useNavigate();
-  const [items, setItems] = useState<CartItemData[]>(INITIAL_CART);
 
-  const handleQuantityChange = (id: number, quantity: number) => {
+  const [items, setItems] = useState<CartItemData[]>(() => getCartItems());
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [toast, setToast] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  // Sincroniza con localStorage cada vez que cambien los items
+  useEffect(() => {
+    setCartItems(items);
+  }, [items]);
+
+  const handleQuantityChange = (id: string, quantity: number) => {
     setItems((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, quantity } : item,
@@ -44,7 +67,7 @@ export default function Cart() {
     );
   };
 
-  const handleRemove = (id: number) => {
+  const handleRemove = (id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
   };
 
@@ -56,13 +79,78 @@ export default function Cart() {
   const coupon = 0;
   const total = subtotal + shipping - coupon;
 
+  const handleBuyNow = async () => {
+    if (items.length === 0) {
+      setToast({
+        type: "error",
+        message: "Your cart is empty",
+      });
+      return;
+    }
+
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      setToast({
+        type: "error",
+        message: "You need to login to complete your purchase",
+      });
+      navigate("/login");
+      return;
+    }
+
+    const cartId = getCartIdFromStorage();
+    if (!cartId) {
+      setToast({
+        type: "error",
+        message:
+          "Cart not initialized. Make sure you are using the Cart backend and storing cartId.",
+      });
+      return;
+    }
+
+    try {
+      setIsPlacingOrder(true);
+
+      // 👇 Crear orden en el microservicio de Orders usando solo cartId
+      const order = await createOrderFromCartId(cartId);
+
+      const customerName = order.customerName ?? getNameFromToken() ?? "friend";
+      const mainItem = order.items[0];
+
+      // Limpiar carrito visual del frontend
+      setItems([]);
+      setCartItems([]);
+
+      // Navegar a /thanks pasando la info necesaria
+      navigate("/thanks", {
+        state: {
+          orderId: order.id,
+          customerName,
+          mainProductName: mainItem?.name ?? "your plant",
+        },
+      });
+    } catch (err: any) {
+      console.error(err);
+      setToast({
+        type: "error",
+        message: err?.message ?? "Error creating order",
+      });
+    } finally {
+      setIsPlacingOrder(false);
+    }
+  };
+
   return (
     <main className="min-h-screen flex flex-col bg-white">
       <Header />
 
       <section className="flex-1 px-16 py-10 flex gap-12">
         <div className="flex-1">
-          <button type="button" onClick={() => navigate(-1)} className="text-slate-700 hover:text-slate-900 mb-4 cursor-pointer">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="text-slate-700 hover:text-slate-900 mb-4 cursor-pointer"
+          >
             <i className="ti ti-chevron-left text-xl" />
           </button>
 
@@ -134,17 +222,41 @@ export default function Cart() {
               </div>
             </div>
 
-            <button type="button" className="w-full mt-6 py-3 rounded-lg bg-[#28B446] text-white text-sm font-semibold hover:bg-[#1F9537] transition-colors"
-              onClick={() => {
-                console.log("Buy now clicked");
-              }}>
-              Buy now
+            <button
+              type="button"
+              className="w-full mt-6 py-3 rounded-lg bg-[#28B446] text-white text-sm font-semibold hover:bg-[#1F9537] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              disabled={isPlacingOrder || items.length === 0}
+              onClick={handleBuyNow}
+            >
+              {isPlacingOrder ? "Processing..." : "Buy now"}
             </button>
           </div>
         </aside>
       </section>
 
       <Footer />
+
+      {toast && (
+        <div
+          className={`fixed bottom-4 right-4 z-50 max-w-xs text-white text-sm px-4 py-3 rounded-lg shadow-lg flex items-center gap-2
+            ${toast.type === "error" ? "bg-red-500" : "bg-emerald-500"}
+          `}
+        >
+          <i
+            className={`ti ${
+              toast.type === "error" ? "ti-alert-circle" : "ti-check"
+            } text-lg`}
+          />
+          <span className="flex-1">{toast.message}</span>
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            className="ml-2 text-xs opacity-80 hover:opacity-100 underline"
+          >
+            Close
+          </button>
+        </div>
+      )}
     </main>
   );
 }

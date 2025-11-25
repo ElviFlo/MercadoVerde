@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import { addItemToCartBackend } from "./api/cart";
+import { addItemToLocalCart } from "./cartStorage";
 import type { Product } from "./data/products";
 import type React from "react";
 import {
@@ -352,11 +354,30 @@ export default function ProductPage() {
               <button
                 type="button"
                 className="px-8 py-3 rounded-full bg-[#53D15E] text-white text-sm font-semibold cursor-pointer hover:bg-[#33B13E] transition-colors duration-200"
-                onClick={() => {
-                  console.log("Add to cart:", {
-                    productId: product.id,
-                    quantity,
-                  });
+                onClick={async () => {
+                  try {
+                    // 1) Actualiza carrito local (UI)
+                    addItemToLocalCart({
+                      id: product.id,
+                      name: product.name,
+                      type: product.type,
+                      price: product.price,
+                      quantity,
+                      imageUrl: product.imageUrl,
+                    });
+
+                    // 2) Actualiza carrito en backend y asegura cartId en localStorage
+                    await addItemToCartBackend({
+                      productId: product.id,
+                      quantity,
+                    });
+
+                    // opcional: toast de éxito
+                    // setToast({ type: "success", message: "Added to cart" });
+                  } catch (err: any) {
+                    console.error(err);
+                    // setToast({ type: "error", message: err.message ?? "Error adding to cart" });
+                  }
                 }}
               >
                 Add to Cart

@@ -43,13 +43,27 @@ export class OrdersController {
         authHeader,
       });
 
-      return res.status(201).json(order);
-    } catch (err: any) {
-      console.error("[OrdersController.create] error:", err?.message);
-      return res.status(500).json({
-        message: "Error creando la orden",
-        error: err?.message,
-      });
+      // 🔁 Mapeamos la entidad de dominio a un DTO estable para el frontend
+      const response = {
+        id: order.id,
+        status: order.status,
+        total: order.total,
+        totalItems: order.totalItems,
+        createdAt: order.createdAt, // se serializa como ISO string
+        customerName: order.customer.name,
+        items: order.items.map((it) => ({
+          productId: it.productId,
+          name: it.productName,
+          unitPrice: it.unitPrice,
+          quantity: it.quantity,
+          subtotal: it.subtotal,
+        })),
+      };
+
+      return res.status(201).json(response);
+    } catch (e) {
+      console.error("[orders] Error creating order:", e);
+      return res.status(500).json({ message: (e as Error).message });
     }
   }
 
