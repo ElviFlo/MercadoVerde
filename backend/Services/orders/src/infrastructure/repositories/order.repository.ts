@@ -1,96 +1,86 @@
-// Services/orders/src/infrastructure/repositories/order.repository.ts
-import { PrismaClient } from "@prisma/client";
-import { fetchProduct } from "../services/products.client";
-import { reserveProduct, releaseProduct } from "../services/products.client";
+// orders/src/infrastructure/repositories/order.repository.ts
 
-const prisma = new PrismaClient();
+import {
+  Order,
+  OrderCustomer,
+  OrderStatus,
+} from "../../domain/entities/order.entity";
+import { OrderItem } from "../../domain/entities/order-item.entity";
 
-type OrderItemInput = { productId: string; quantity: number };
+export interface CreateOrderItemInput {
+  productId: string;
+  productName: string; // 👈 coincide con OrderItem.productName
+  unitPrice: number;
+  quantity: number;
+}
 
-export class OrderRepository {
-  async createOrder(
-    cartId: string,
-    userId: string,
-    userName: string,
-    userEmail: string | undefined,
-    items: OrderItemInput[],
-    authHeader?: string
-   ) {
+export interface CreateOrderInput {
+  cartId: string;
+  userId: string;
+  userName: string;
+  items: CreateOrderItemInput[];
+  status?: string; // por ahora usamos "PAID"
+}
 
-    const cart = await prisma.cart.findUnique({
-      where: { id: cartId },
-    });
+export interface IOrderRepository {
+  create(data: CreateOrderInput): Promise<Order>;
+  findAllByUser(userId: string): Promise<Order[]>;
+  findById(id: string): Promise<Order | null>;
+}
 
-    if (!cart || cart.userId !== userId) {
-      throw new Error(`Cart ${cartId} not found for user ${userId}`);
+const randomId = () => Math.random().toString(36).slice(2);
+
+export class InMemoryOrderRepository implements IOrderRepository {
+  private orders: Order[] = [];
+
+  async create(data: CreateOrderInput): Promise<Order> {
+    if (!data.items || data.items.length === 0) {
+      throw new Error("Order must have at least one item");
     }
 
-    const enriched = await Promise.all(
-      items.map(async (i) => {
-        const p = await fetchProduct(i.productId, authHeader);
-        if (!p?.id) throw new Error(`Producto ${i.productId} no existe`);
-        const nameSnapshot = String(p.name ?? "");
-        const unitPrice = Number(p.price ?? 0);
-        if (!(unitPrice >= 0)) throw new Error(`Precio inválido para ${i.productId}`);
-        const quantity = Number(i.quantity ?? 0);
-        if (!(quantity > 0)) throw new Error(`quantity inválido para ${i.productId}`);
-        const subtotal = unitPrice * quantity;
-        return {
-          productId: String(i.productId),
-          nameSnapshot,
-          unitPrice,
-          quantity,
-          subtotal,
-        };
-      })
+    const customer: OrderCustomer = {
+      id: data.userId,
+      name: data.userName,
+      email: undefined,
+    };
+
+    // Crear OrderItem de dominio
+    const items = data.items.map(
+      (i) =>
+        new OrderItem(
+          i.productId,
+          i.productName,
+          i.unitPrice,
+          i.quantity,
+        ),
     );
 
-    const total = enriched.reduce((acc, it) => acc + Number(it.subtotal), 0);
-    const totalItems = enriched.reduce(
-      (acc, it) => acc + Number(it.quantity),
-      0
+    const total = items.reduce((acc, it) => acc + it.subtotal, 0);
+    const totalItems = items.reduce((acc, it) => acc + it.quantity, 0);
+
+    const status: OrderStatus = "PAID";
+
+    const order = new Order(
+      `order_${randomId()}`,
+      data.cartId,
+      customer,
+      items,
+      total,
+      totalItems,
+      status,
+      new Date(),
     );
-    const reserved: Array<{ productId: string; quantity: number }> = [];
-    try {
-      for (const it of enriched) {
-        await reserveProduct(it.productId, it.quantity);
-        reserved.push({ productId: it.productId, quantity: it.quantity });
-      }
 
-      const created = await prisma.order.create({
-        data: {
-          cartId: cart.id,
-          userId,
-          userName: userName,
-          status: "PAID",
-          total,
-          totalItems,
-          items: { create: enriched },
-        },
-        include: { items: true },
-      });
-
-      return created;
-    } catch (e) {
-      for (const r of reserved) {
-        try { await releaseProduct(r.productId, r.quantity); } catch { /* best-effort */ }
-      }
-      throw e;
-    }
+    this.orders.push(order);
+    return order;
   }
 
-  async getByUser(userId: string) {
-    return prisma.order.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      include: { items: true },
-    });
+  async findAllByUser(userId: string): Promise<Order[]> {
+    return this.orders.filter((o) => o.customer.id === userId);
   }
 
-  async listAll() {
-    return prisma.order.findMany({
-      orderBy: { createdAt: "desc" },
-      include: { items: true },
-    });
+  async findById(id: string): Promise<Order | null> {
+    const found = this.orders.find((o) => o.id === id);
+    return found ?? null;
   }
 }

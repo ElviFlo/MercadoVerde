@@ -1,10 +1,24 @@
-import { Link } from "react-router-dom";
+// src/thanks.tsx
+import { Link, useLocation } from "react-router-dom";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 
+type ThanksLocationState = {
+  orderId?: string;
+  customerName?: string;
+  mainProductName?: string;
+};
+
 export default function Thanks() {
+  const location = useLocation();
+  const state = (location.state ?? {}) as ThanksLocationState;
+
+  const orderNumber = state.orderId ?? "—";
+  const customerName = state.customerName ?? "friend";
+  const productName = state.mainProductName ?? "your plant";
+
   return (
-    <main className="flex flex-col justify-between">
+    <main className="flex flex-col justify-between min-h-screen bg-white">
       <Header />
       <div className="flex flex-col justify-center items-center text-center max-w-2xl mx-auto p-20">
         {/* Green circle with check */}
@@ -19,18 +33,23 @@ export default function Thanks() {
 
         {/* Order number */}
         <p className="text-sm font-semibold text-emerald-500 tracking-wide mb-6">
-          ORDER #NUMBER
+          ORDER #{orderNumber}
         </p>
 
         {/* Description */}
         <p className="text-xs text-slate-600 leading-relaxed mb-8">
-          Thank you NAME for buying PRODUCT. The nature is grateful to you. Now
-          that your order is confirmed it will be ready to ship in 2 days.
-          Please check your inbox in the future for your order updates.
+          Thank you <span className="font-semibold">{customerName}</span> for
+          buying <span className="font-semibold">{productName}</span>. The
+          nature is grateful to you. Now that your order is confirmed it will be
+          ready to ship in 2 days. Please check your inbox in the future for
+          your order updates.
         </p>
 
         {/* Button */}
-        <Link to="/" className="px-10 py-3 rounded-md bg-emerald-500 text-white font-semibold shadow hover:bg-emerald-600 transition-colors">
+        <Link
+          to="/"
+          className="px-10 py-3 rounded-md bg-emerald-500 text-white font-semibold shadow hover:bg-emerald-600 transition-colors"
+        >
           Back to Homepage
         </Link>
       </div>
