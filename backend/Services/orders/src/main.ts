@@ -5,46 +5,35 @@ import cors from "cors";
 
 import { orderRoutes } from "./infrastructure/routes/order.routes";
 import { setupSwagger } from "./infrastructure/swagger/order.swagger";
-import { OrderController } from "./infrastructure/controllers/order.controller";
-import { CreateOrderUseCase } from "./application/use-cases/create-order.use-case";
-import { GetAllOrdersUseCase } from "./application/use-cases/get-orders.use-case";
-import { orderRepository as inMemoryOrderRepository } from "./infrastructure/repositories/order.repository.impl";
-import { CartClient } from "./infrastructure/services/cart.client";
+import { OrdersController } from "./infrastructure/controllers/order.controller";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 3002);
 
+// Middlewares base
 app.disable("x-powered-by");
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Healthcheck
 app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({ ok: true, service: "orders" });
 });
 
+// Swagger
 setupSwagger(app);
 
-const cartClient = new CartClient();
-
-const createOrderUseCase = new CreateOrderUseCase(
-  inMemoryOrderRepository,
-  cartClient,
-);
-
-const getAllOrdersUseCase = new GetAllOrdersUseCase(inMemoryOrderRepository);
-
-const orderController = new OrderController(
-  createOrderUseCase,
-  getAllOrdersUseCase,
-);
-
-const ordersRouter = orderRoutes(orderController);
+// ----- Rutas de Orders -----
+const ordersController = new OrdersController();
+const ordersRouter = orderRoutes(ordersController);
 
 app.use("/orders", ordersRouter);
 
+// 404
 app.use((_req, res) => res.status(404).json({ message: "Not found" }));
 
+// Manejo de errores
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   console.error("[orders] Error:", err);
   res
@@ -54,6 +43,6 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 
 app.listen(PORT, () => {
   console.log(
-    `🟢 Orders service running on http://localhost:${PORT}/docs/ with Swagger`,
+    `🟢 Orders service running on http://localhost:${PORT}/docs/ with Swagger`
   );
 });

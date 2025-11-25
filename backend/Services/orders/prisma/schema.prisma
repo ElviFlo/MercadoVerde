@@ -17,6 +17,7 @@ model Order {
   totalItems Int
   createdAt  DateTime    @default(now())
   items      OrderItem[]
+
   @@index([cartId])
   @@index([userId])
 }
@@ -29,6 +30,8 @@ model OrderItem {
   unitPrice    Decimal @db.Decimal(10, 2)
   quantity     Int
   subtotal     Decimal @db.Decimal(12, 2)
+
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
   @@index([orderId])
 }

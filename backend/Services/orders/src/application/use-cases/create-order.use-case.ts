@@ -8,18 +8,18 @@ interface CreateOrderDTO {
   userName?: string;
 }
 
-export class CreateOrderUseCase {
+export class CreateOrder {
   constructor(
-    private readonly orderRepository: IOrderRepository,
-    private readonly cartClient: CartClient,
+    private readonly orderRepo: OrderRepository,
+    private readonly cartService: CartService,
   ) {}
 
   async execute({ cartId, userName }: CreateOrderDTO): Promise<Order> {
     // 1) Traer el carrito desde el micro de Cart
     const cart = await this.cartClient.getCartById(cartId);
 
-    if (!cart) {
-      throw new Error(`Cart with id ${cartId} not found`);
+    if (!authHeader) {
+      throw new Error("Falta header Authorization");
     }
 
     if (!cart.items || cart.items.length === 0) {
