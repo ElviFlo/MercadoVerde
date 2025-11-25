@@ -1,6 +1,11 @@
+// src/infrastructure/repositories/product.repository.impl.ts
+
 import { ProductRepository } from "../../domain/repositories/IProductRepository";
-import { Product } from "../../domain/entities/Product";
-import { CreateProductDTO } from "../../application/dtos/CreateProductDTO";
+import {
+  Product,
+  CreateProductDTO,
+  UpdateProductDTO,
+} from "../../domain/entities/Product";
 
 let randomUUID = () => Math.random().toString(36).slice(2);
 
@@ -12,27 +17,44 @@ export class InMemoryProductRepository implements ProductRepository {
     const now = new Date();
 
     // Normaliza price si viene como string
-    const price =
-      typeof data.price === "string" ? parseFloat(data.price) : data.price;
+    const rawPrice =
+      typeof data.price === "string"
+        ? Number.parseFloat(data.price)
+        : data.price;
+    const price = Number.isNaN(rawPrice) ? 0 : rawPrice;
 
     // Normaliza categoría: preferimos productCategoryId, pero aceptamos categoryId
     const productCategoryId =
       data.productCategoryId ?? data.categoryId ?? null;
+
+    // type con default
+    const type = data.type ?? "general";
+
+    // imageUrl con placeholder si viene vacío o no viene
+    const imageUrl =
+      typeof data.imageUrl === "string" && data.imageUrl.trim() !== ""
+        ? data.imageUrl
+        : "/plants/plant-placeholder.png";
 
     const product: Product = {
       id,
       name: data.name,
       description: data.description ?? null,
       price,
-      // 👇 campo de categoría en el dominio
+
+      // campos de categoría en el dominio
       productCategoryId,
+      categoryId: productCategoryId,
+
       createdBy: data.createdBy ?? "unknown",
       createdAt: now,
       updatedAt: now,
 
-      // 👇 nuevos campos añadidos correctamente
       active: data.active ?? true,
       stock: data.stock ?? 0,
+
+      type,
+      imageUrl,
     };
 
     this.products.set(product.id, product);
@@ -49,13 +71,56 @@ export class InMemoryProductRepository implements ProductRepository {
     return this.products.get(id) ?? null;
   }
 
-  async update(id: string, data: Partial<Product>): Promise<Product | null> {
+  async update(id: string, data: UpdateProductDTO): Promise<Product | null> {
     const existing = this.products.get(id);
     if (!existing) return null;
 
+    // price: admite number o string
+    let price = existing.price;
+    if (data.price !== undefined) {
+      const raw =
+        typeof data.price === "string"
+          ? Number.parseFloat(data.price)
+          : data.price;
+      if (!Number.isNaN(raw)) {
+        price = raw;
+      }
+    }
+
+    // categoría normalizada
+    const productCategoryId =
+      data.productCategoryId ??
+      data.categoryId ??
+      existing.productCategoryId ??
+      existing.categoryId ??
+      null;
+
+    // type
+    const type = data.type ?? existing.type;
+
+    // imageUrl con placeholder si viene string vacío
+    const imageUrl =
+      data.imageUrl !== undefined
+        ? typeof data.imageUrl === "string" &&
+          data.imageUrl.trim() === ""
+          ? "/plants/plant-placeholder.png"
+          : data.imageUrl
+        : existing.imageUrl;
+
     const updated: Product = {
       ...existing,
-      ...data,
+      name: data.name ?? existing.name,
+      description:
+        data.description !== undefined
+          ? data.description
+          : existing.description,
+      price,
+      productCategoryId,
+      categoryId: productCategoryId,
+      active: data.active ?? existing.active,
+      stock: data.stock ?? existing.stock,
+      type,
+      imageUrl,
       updatedAt: new Date(),
     };
 

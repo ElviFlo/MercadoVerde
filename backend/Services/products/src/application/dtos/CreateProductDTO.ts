@@ -23,4 +23,6 @@ export interface CreateProductDTO {
   // 👇 campos opcionales al crear
   active?: boolean;   // por defecto true en DB, pero se puede especificar
   stock?: number;     // cantidad inicial disponible
+  type: string;
+  imageUrl?: string | null;
 }

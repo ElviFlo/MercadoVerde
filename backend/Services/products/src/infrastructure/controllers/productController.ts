@@ -59,11 +59,24 @@ export async function create(req: Request, res: Response) {
   const body = req.body as Omit<CreateProductDTO, "createdBy"> & {
     productCategoryId?: string | null;
     categoryId?: string | null;
+    type?: string;
+    imageUrl?: string | null;
   };
+
+  // 🔹 Validación mínima para type (lo necesitas siempre)
+  if (!body.type || typeof body.type !== "string") {
+    return res.status(400).json({ message: "type is required" });
+  }
 
   // Normalizamos el ID de categoría desde el body
   const productCategoryId =
     (body as any).productCategoryId ?? (body as any).categoryId ?? null;
+
+  // 🔹 Default para imageUrl si no viene o viene vacío
+  const normalizedImageUrl =
+    body.imageUrl && body.imageUrl.trim() !== ""
+      ? body.imageUrl
+      : "/plants/plant-placeholder.png";
 
   const dto: CreateProductDTO = {
     name: body.name,
@@ -77,6 +90,10 @@ export async function create(req: Request, res: Response) {
     createdBy: (req as any).user?.email ?? "unknown",
     active: (body as any).active,
     stock: (body as any).stock,
+
+    // 🔹 Nuevos campos
+    type: body.type,
+    imageUrl: normalizedImageUrl,
   };
 
   const created = await createUC.execute(dto);
@@ -98,6 +115,15 @@ export async function update(req: Request, res: Response) {
     mapped.categoryId = mapped.productCategoryId;
   }
 
+  // 🔹 Normalizar imageUrl también aquí: si viene string vacío, usamos placeholder
+  if (mapped.imageUrl !== undefined) {
+    mapped.imageUrl =
+      typeof mapped.imageUrl === "string" &&
+      mapped.imageUrl.trim() === ""
+        ? "/plants/plant-placeholder.png"
+        : mapped.imageUrl;
+  }
+
   const updated = await updateUC.execute({ id, ...mapped });
   if (!updated) return res.status(404).json({ message: "Product not found" });
   res.json(updated);
@@ -114,14 +140,13 @@ export async function remove(req: Request, res: Response) {
       return res.status(404).json({ message: "Producto no encontrado" });
     }
 
-    // se eliminó correctamente -> 204 (sin body)
+    // se eliminó correctamente -> 200 (tu código actual usa 200, lo mantengo)
     return res.status(200).send();
   } catch (err) {
     console.error("Error eliminando producto:", err);
     return res.status(500).json({ message: "Error eliminando producto" });
   }
 }
-
 
 // POST /products/:id/reserve  { quantity }
 export async function reserve(req: Request, res: Response) {

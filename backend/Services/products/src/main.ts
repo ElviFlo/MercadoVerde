@@ -12,6 +12,9 @@ import { setupSwagger } from "./infrastructure/swagger/product.swagger";
 // Si usas PG (opcional)
 import { ensureSchema } from "./infrastructure/db/pg";
 
+// 👉 NUEVO: seed inicial de productos
+import { seedProductsIfEmpty } from "./infrastructure/seed/seedProducts";
+
 const app = express();
 const PORT = Number(process.env.PORT ?? 3003);
 
@@ -45,11 +48,18 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 
 const server = app.listen(PORT, async () => {
   try {
+    // Asegura que el schema exista (migraciones / CREATE TABLE, etc.)
     await ensureSchema?.();
-  } catch {
-    /* opcional */
+
+    // 🔥 Seed de productos si la tabla está vacía
+    await seedProductsIfEmpty();
+  } catch (err) {
+    console.error("[products] Error in startup tasks:", err);
   }
-  console.log(`🟢 Products service running on http://localhost:${PORT}/docs/ with Swagger`);
+
+  console.log(
+    `🟢 Products service running on http://localhost:${PORT}/docs/ with Swagger`,
+  );
 });
 
 // Apagado limpio
