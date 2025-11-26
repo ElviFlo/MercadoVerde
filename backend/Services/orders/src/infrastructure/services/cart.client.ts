@@ -11,6 +11,8 @@ export interface CartItem {
 }
 
 export interface CartResponse {
+  id: string;        // cartId
+  userId: string;    // dueño del carrito
   items: CartItem[];
   total: number;
   totalItems: number;
@@ -29,7 +31,7 @@ export class CartService {
       { headers: { Authorization: authHeader } }
     );
 
-    const raw = (data as any).cart ?? data;
+    const raw: any = (data as any).cart ?? data;
 
     const items: CartItem[] = (raw.items ?? []).map((it: any) => {
       const quantity = Number(it.quantity ?? 0);
@@ -39,13 +41,19 @@ export class CartService {
       return {
         id: String(it.id ?? ""),
         productId: String(it.productId ?? ""),
-        // Por ahora no tienes nombre de producto aquí, así que guardamos algo neutro
+        // por ahora no tienes nombre en la respuesta, así que dejamos algo neutro
         nameSnapshot: `Producto ${it.productId ?? ""}`,
         unitPrice,
         quantity,
         subtotal,
       };
     });
+
+    // tomamos cartId y userId del primer item (que es como viene en tu JSON)
+    const firstItem = (raw.items ?? [])[0];
+
+    const id = String(firstItem?.cartId ?? raw.id ?? "");
+    const userId = String(firstItem?.userId ?? raw.userId ?? "");
 
     const total = Number(
       raw.total ??
@@ -59,6 +67,6 @@ export class CartService {
       items.reduce((sum, it) => sum + it.quantity, 0),
     );
 
-    return { items, total, totalItems };
+    return { id, userId, items, total, totalItems };
   }
 }

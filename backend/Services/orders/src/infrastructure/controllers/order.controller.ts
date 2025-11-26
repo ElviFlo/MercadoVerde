@@ -4,13 +4,12 @@ import { CreateOrder } from "../../application/use-cases/create-order.use-case";
 import { OrderRepository } from "../repositories/order.repository";
 import { CartService } from "../services/cart.client";
 
-// Instancias compartidas (1 sola vez en todo el proceso)
 const orderRepository = new OrderRepository();
 const cartService = new CartService();
 const createOrderUC = new CreateOrder(orderRepository, cartService);
 
 export class OrdersController {
-  // 📌 Crear orden a partir de un carrito existente
+  // 🟢 Crear orden (cliente)
   async create(req: Request, res: Response) {
     try {
       const u = (req as any).user;
@@ -25,49 +24,31 @@ export class OrdersController {
           .json({ message: "Falta header Authorization" });
       }
 
-      // El cliente envía el cartId del carrito que quiere transformar en orden
       const { cartId } = req.body as { cartId?: string };
-      if (!cartId) {
-        return res.status(400).json({ message: "cartId requerido" });
-      }
 
       const userId = String(u.sub ?? u.id);
       const userName = String(u.name ?? "");
       const userEmail = u.email as string | undefined;
 
       const order = await createOrderUC.execute({
-        cartId,
+        cartId,      // opcional
         userId,
         userName,
         userEmail,
         authHeader,
       });
 
-      // 🔁 Mapeamos la entidad de dominio a un DTO estable para el frontend
-      const response = {
-        id: order.id,
-        status: order.status,
-        total: order.total,
-        totalItems: order.totalItems,
-        createdAt: order.createdAt, // se serializa como ISO string
-        customerName: order.customer.name,
-        items: order.items.map((it) => ({
-          productId: it.productId,
-          name: it.productName,
-          unitPrice: it.unitPrice,
-          quantity: it.quantity,
-          subtotal: it.subtotal,
-        })),
-      };
-
-      return res.status(201).json(response);
-    } catch (e) {
-      console.error("[orders] Error creating order:", e);
-      return res.status(500).json({ message: (e as Error).message });
+      return res.status(201).json(order);
+    } catch (err: any) {
+      console.error("[OrdersController.create] error:", err?.message);
+      return res.status(500).json({
+        message: "Error creando la orden",
+        error: err?.message,
+      });
     }
   }
 
-  // 📌 Listar MIS órdenes (cliente)
+  // 🟢 Listar MIS órdenes (cliente)
   async getMine(req: Request, res: Response) {
     try {
       const u = (req as any).user;
@@ -76,9 +57,30 @@ export class OrdersController {
       }
 
       const userId = String(u.sub ?? u.id);
+
       const orders = await orderRepository.getByUser(userId);
 
-      return res.status(200).json(orders);
+      const result = orders.map((o: any) => ({
+        id: o.id,
+        cartId: o.cartId,
+        user: {
+          id: o.userId,
+          name: o.userName,
+        },
+        total: o.total,
+        totalItems: o.totalItems,
+        createdAt: o.createdAt,
+        items: o.items.map((it: any) => ({
+          id: it.id,
+          productId: it.productId,
+          productName: it.nameSnapshot, // 👈 usamos nameSnapshot
+          unitPrice: it.unitPrice,
+          quantity: it.quantity,
+          subtotal: it.subtotal,
+        })),
+      }));
+
+      return res.status(200).json(result);
     } catch (err: any) {
       console.error("[OrdersController.getMine] error:", err?.message);
       return res.status(500).json({
@@ -88,11 +90,32 @@ export class OrdersController {
     }
   }
 
-  // 📌 Listar TODAS las órdenes (admin)
+  // 🟢 Listar TODAS las órdenes (admin)
   async getAll(_req: Request, res: Response) {
     try {
       const orders = await orderRepository.listAll();
-      return res.status(200).json(orders);
+
+      const result = orders.map((o: any) => ({
+        id: o.id,
+        cartId: o.cartId,
+        user: {
+          id: o.userId,
+          name: o.userName,
+        },
+        total: o.total,
+        totalItems: o.totalItems,
+        createdAt: o.createdAt,
+        items: o.items.map((it: any) => ({
+          id: it.id,
+          productId: it.productId,
+          productName: it.nameSnapshot,
+          unitPrice: it.unitPrice,
+          quantity: it.quantity,
+          subtotal: it.subtotal,
+        })),
+      }));
+
+      return res.status(200).json(result);
     } catch (err: any) {
       console.error("[OrdersController.getAll] error:", err?.message);
       return res.status(500).json({

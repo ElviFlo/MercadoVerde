@@ -3,6 +3,7 @@ import { OrderRepository } from "../../infrastructure/repositories/order.reposit
 import { CartService } from "../../infrastructure/services/cart.client";
 
 export interface CreateOrderInput {
+  cartId?: string;   // 👈 opcional, si viene del body lo usamos
   userId: string;
   userName: string;
   userEmail?: string;
@@ -16,7 +17,7 @@ export class CreateOrder {
   ) {}
 
   async execute(input: CreateOrderInput) {
-    const { userId, userName, userEmail, authHeader } = input;
+    const { cartId, userId, userName, userEmail, authHeader } = input;
 
     if (!authHeader) {
       throw new Error("Falta header Authorization");
@@ -26,25 +27,39 @@ export class CreateOrder {
     const cart = await this.cartService.getMyCart(authHeader);
 
     console.log("[CreateOrder] userId del token:", userId);
+    console.log("[CreateOrder] cart.id:", cart?.id);
     console.log("[CreateOrder] cart.userId:", cart?.userId);
 
-    if (!cart || cart.userId !== userId) {
+    if (!cart) {
+      throw new Error("Carrito no encontrado");
+    }
+
+    if (cart.userId !== userId) {
       throw new Error("Carrito no encontrado para este usuario");
     }
+
+    if (!cart.items || cart.items.length === 0) {
+      throw new Error("El carrito está vacío");
+    }
+
+    // Usamos el cartId del body si viene, si no, el del carrito
+    const finalCartId = cartId ?? cart.id;
 
     // Mapear items del carrito a items de la orden
     const items = cart.items.map((it) => ({
       productId: it.productId,
+      nameSnapshot: it.nameSnapshot,
+      unitPrice: it.unitPrice,
       quantity: it.quantity,
+      subtotal: it.subtotal,
     }));
 
-    const created = await this.orderRepo.createOrder(
-      cart.id,      // 👈 aquí usamos EL cartId del carrito
+    const order = await this.orderRepo.createOrder(
+      finalCartId,
       userId,
       userName,
       userEmail,
       items,
-      authHeader,
     );
 
     return order;
