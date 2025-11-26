@@ -1,21 +1,21 @@
-// src/infrastructure/controllers/KoraController.ts
 import { Request, Response } from "express";
 import { parseCommand } from "../services/NluParser";
-import { ProductsService } from "../services/products.service";
-import { CartService } from "../services/cart.service";
-import { transcribeAudioFromBuffer } from "../services/transcribe.service";
+import { ProductsService } from "../../services/products.service";
+import { CartService } from "../../services/cart.service";
 
 export class KoraController {
   // -------- TEXTO: POST /api/kora/command --------
   async handleCommand(req: Request, res: Response) {
     try {
       const u = (req as any).user;
-      if (!u) return res.status(401).json({ message: "Usuario no autenticado" });
+      if (!u) {
+        return res.status(401).json({ message: "Usuario no autenticado" });
+      }
 
       const userId = String(u.sub ?? u.id);
       const authHeader = req.headers.authorization as string | undefined;
 
-      const { text } = req.body || {};
+      const { text } = req.body as { text?: string };
       if (!text || typeof text !== "string") {
         return res.status(400).json({ message: "text requerido" });
       }
@@ -29,15 +29,24 @@ export class KoraController {
       }
 
       if (parsed.intent !== "add" || !parsed.productName) {
-        return res.status(400).json({
-          message: "No entendí qué producto agregar",
-        });
+        return res
+          .status(400)
+          .json({ message: "No entendí qué producto agregar" });
       }
 
       const quantity = parsed.quantity ?? 1;
       const productQuery = parsed.productName;
 
+      console.log(
+        "[Kora] comando",
+        { text, productQuery, quantity, userId },
+        "authHeader?",
+        !!authHeader
+      );
+
+      // 1) Buscar producto
       const found = await ProductsService.searchProducts(productQuery, authHeader);
+      console.log("[Kora] productos encontrados:", found?.length);
 
       if (!found || found.length === 0) {
         return res.status(200).json({
@@ -47,6 +56,7 @@ export class KoraController {
 
       const chosen = found[0];
 
+      // 2) Agregar al carrito
       const cartResult = await CartService.addToCart(
         userId,
         chosen.id,
@@ -60,9 +70,16 @@ export class KoraController {
         cart: cartResult,
       });
     } catch (err: any) {
+      console.error(
+        "[KoraController.handleCommand] error:",
+        err?.response?.status,
+        err?.response?.data || err?.message
+      );
       return res.status(500).json({
         message: "Error procesando comando",
         error: err?.message,
+        status: err?.response?.status,
+        data: err?.response?.data,
       });
     }
   }
@@ -71,15 +88,17 @@ export class KoraController {
   async handleVoiceCommand(req: Request, res: Response) {
     try {
       const file = (req as any).file;
-      if (!file) return res.status(400).json({ message: "Falta archivo de audio" });
+      if (!file) {
+        return res.status(400).json({ message: "Falta archivo de audio" });
+      }
 
-      // 🔥 Transcribir audio REAL
-      const text = await transcribeAudioFromBuffer(file.buffer, file.originalname);
+      // Por ahora, texto fijo de prueba:
+      const text = "agrega una Aloe Vera";
 
-      // Reusar el comando normal
       (req as any).body = { text };
       return this.handleCommand(req, res);
     } catch (err: any) {
+      console.error("[KoraController.handleVoiceCommand] error:", err);
       return res.status(500).json({
         message: "Error procesando comando de voz",
         error: err?.message,
