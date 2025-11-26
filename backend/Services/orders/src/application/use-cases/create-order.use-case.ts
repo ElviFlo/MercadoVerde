@@ -1,11 +1,13 @@
 // src/application/use-cases/create-order.use-case.ts
-import { IOrderRepository } from "../../infrastructure/repositories/order.repository";
-import { Order } from "../../domain/entities/order.entity";
-import { CartClient } from "../../infrastructure/services/cart.client";
+import { OrderRepository } from "../../infrastructure/repositories/order.repository";
+import { CartService } from "../../infrastructure/services/cart.client";
 
-interface CreateOrderDTO {
-  cartId: string;
-  userName?: string;
+export interface CreateOrderInput {
+  cartId?: string;   // 👈 opcional, si viene del body lo usamos
+  userId: string;
+  userName: string;
+  userEmail?: string;
+  authHeader: string;
 }
 
 export class CreateOrder {
@@ -14,53 +16,51 @@ export class CreateOrder {
     private readonly cartService: CartService,
   ) {}
 
-  async execute({ cartId, userName }: CreateOrderDTO): Promise<Order> {
-    // 1) Traer el carrito desde el micro de Cart
-    const cart = await this.cartClient.getCartById(cartId);
+  async execute(input: CreateOrderInput) {
+    const { cartId, userId, userName, userEmail, authHeader } = input;
 
     if (!authHeader) {
       throw new Error("Falta header Authorization");
     }
 
+    // 👇 Llamamos al microservicio de cart
+    const cart = await this.cartService.getMyCart(authHeader);
+
+    console.log("[CreateOrder] userId del token:", userId);
+    console.log("[CreateOrder] cart.id:", cart?.id);
+    console.log("[CreateOrder] cart.userId:", cart?.userId);
+
+    if (!cart) {
+      throw new Error("Carrito no encontrado");
+    }
+
+    if (cart.userId !== userId) {
+      throw new Error("Carrito no encontrado para este usuario");
+    }
+
     if (!cart.items || cart.items.length === 0) {
-      throw new Error("Cart must have at least one item to create an order");
+      throw new Error("El carrito está vacío");
     }
 
-    if (!cart.userId) {
-      throw new Error("Cart must have a userId to create an order");
-    }
+    // Usamos el cartId del body si viene, si no, el del carrito
+    const finalCartId = cartId ?? cart.id;
 
-    // 2) Mapear items del carrito al formato que espera el repositorio
-    const items = cart.items.map((i: any) => ({
-      productId: i.product.id,
-      productName: i.product.name,
-      unitPrice: i.product.price,
-      quantity: i.quantity,
+    // Mapear items del carrito a items de la orden
+    const items = cart.items.map((it) => ({
+      productId: it.productId,
+      nameSnapshot: it.nameSnapshot,
+      unitPrice: it.unitPrice,
+      quantity: it.quantity,
+      subtotal: it.subtotal,
     }));
 
-    // 3) Validar total y totalItems (usamos lo que viene del micro de Cart)
-    const total = cart.total;
-    const totalItems = cart.totalItems;
-
-    if (!Number.isFinite(total) || total < 0) {
-      throw new Error("Cart total must be a non-negative number");
-    }
-
-    if (!Number.isInteger(totalItems) || totalItems <= 0) {
-      throw new Error("Cart totalItems must be a positive integer");
-    }
-
-    // 4) Resolver nombre del usuario (no dependemos de cart.userName)
-    const finalUserName = userName ?? "Unknown";
-
-    // 5) Delegar la creación al repositorio (Prisma / InMemory)
-    const order = await this.orderRepository.create({
-      cartId: cart.id,
-      userId: cart.userId,
-      userName: finalUserName,
+    const order = await this.orderRepo.createOrder(
+      finalCartId,
+      userId,
+      userName,
+      userEmail,
       items,
-      status: "PAID",
-    });
+    );
 
     return order;
   }
