@@ -9,10 +9,10 @@ import productsRouter from "./infrastructure/routes/product.routes";
 // Swagger
 import { setupSwagger } from "./infrastructure/swagger/product.swagger";
 
-// Si usas PG (opcional)
-import { ensureSchema } from "./infrastructure/db/pg";
+// ❌ YA NO usamos PG manual
+// import { ensureSchema } from "./infrastructure/db/pg";
 
-// 👉 NUEVO: seed inicial de productos
+// ✅ Seed inicial de productos (usa Prisma)
 import { seedProductsIfEmpty } from "./infrastructure/seed/seedProducts";
 
 const app = express();
@@ -48,8 +48,8 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 
 const server = app.listen(PORT, async () => {
   try {
-    // Asegura que el schema exista (migraciones / CREATE TABLE, etc.)
-    await ensureSchema?.();
+    // ❌ Quitamos ensureSchema (la estructura la manejan las migraciones de Prisma)
+    // await ensureSchema?.();
 
     // 🔥 Seed de productos si la tabla está vacía
     await seedProductsIfEmpty();

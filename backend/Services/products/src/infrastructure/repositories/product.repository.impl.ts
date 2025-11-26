@@ -7,31 +7,23 @@ import {
   UpdateProductDTO,
 } from "../../domain/entities/Product";
 
-let randomUUID = () => Math.random().toString(36).slice(2);
+const randomUUID = () => Math.random().toString(36).slice(2);
 
 export class InMemoryProductRepository implements ProductRepository {
   private products = new Map<string, Product>();
 
   async create(data: CreateProductDTO): Promise<Product> {
     const id = randomUUID();
-    const now = new Date();
 
-    // Normaliza price si viene como string
+    // precio normalizado
     const rawPrice =
       typeof data.price === "string"
         ? Number.parseFloat(data.price)
         : data.price;
-    const price = Number.isNaN(rawPrice) ? 0 : rawPrice;
+    const price = Number.isFinite(rawPrice) ? rawPrice : 0;
 
-    // Normaliza categoría: preferimos productCategoryId, pero aceptamos categoryId
-    const productCategoryId =
-      data.productCategoryId ?? data.categoryId ?? null;
-
-    // type con default
-    const type = data.type ?? "general";
-
-    // imageUrl con placeholder si viene vacío o no viene
-    const imageUrl =
+    // imageUrl con placeholder SIEMPRE string
+    const imageUrl: string =
       typeof data.imageUrl === "string" && data.imageUrl.trim() !== ""
         ? data.imageUrl
         : "/plants/plant-placeholder.png";
@@ -41,30 +33,17 @@ export class InMemoryProductRepository implements ProductRepository {
       name: data.name,
       description: data.description ?? null,
       price,
-
-      // campos de categoría en el dominio
-      productCategoryId,
-      categoryId: productCategoryId,
-
-      createdBy: data.createdBy ?? "unknown",
-      createdAt: now,
-      updatedAt: now,
-
-      active: data.active ?? true,
       stock: data.stock ?? 0,
-
-      type,
-      imageUrl,
+      type: data.type ?? "indoor",
+      imageUrl, // 👈 string
     };
 
-    this.products.set(product.id, product);
+    this.products.set(id, product);
     return product;
   }
 
   async findAll(): Promise<Product[]> {
-    return Array.from(this.products.values()).sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-    );
+    return Array.from(this.products.values());
   }
 
   async findById(id: string): Promise<Product | null> {
@@ -75,37 +54,25 @@ export class InMemoryProductRepository implements ProductRepository {
     const existing = this.products.get(id);
     if (!existing) return null;
 
-    // price: admite number o string
+    // precio
     let price = existing.price;
     if (data.price !== undefined) {
       const raw =
         typeof data.price === "string"
           ? Number.parseFloat(data.price)
           : data.price;
-      if (!Number.isNaN(raw)) {
-        price = raw;
-      }
+      if (Number.isFinite(raw)) price = raw;
     }
 
-    // categoría normalizada
-    const productCategoryId =
-      data.productCategoryId ??
-      data.categoryId ??
-      existing.productCategoryId ??
-      existing.categoryId ??
-      null;
-
-    // type
-    const type = data.type ?? existing.type;
-
-    // imageUrl con placeholder si viene string vacío
-    const imageUrl =
-      data.imageUrl !== undefined
-        ? typeof data.imageUrl === "string" &&
-          data.imageUrl.trim() === ""
-          ? "/plants/plant-placeholder.png"
-          : data.imageUrl
-        : existing.imageUrl;
+    // imageUrl SIEMPRE string
+    let imageUrl: string = existing.imageUrl;
+    if (data.imageUrl !== undefined) {
+      if (data.imageUrl.trim() === "") {
+        imageUrl = "/plants/plant-placeholder.png";
+      } else {
+        imageUrl = data.imageUrl;
+      }
+    }
 
     const updated: Product = {
       ...existing,
@@ -115,13 +82,9 @@ export class InMemoryProductRepository implements ProductRepository {
           ? data.description
           : existing.description,
       price,
-      productCategoryId,
-      categoryId: productCategoryId,
-      active: data.active ?? existing.active,
       stock: data.stock ?? existing.stock,
-      type,
-      imageUrl,
-      updatedAt: new Date(),
+      type: data.type ?? existing.type,
+      imageUrl, // 👈 string
     };
 
     this.products.set(id, updated);

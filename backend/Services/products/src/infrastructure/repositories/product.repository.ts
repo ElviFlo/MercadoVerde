@@ -26,15 +26,7 @@ function toDomain(p: any): Product {
     name: p.name,
     description: p.description ?? null,
     price,
-    productCategoryId: p.categoryId ?? null,
-    categoryId: p.categoryId ?? null,
-    createdBy: p.createdBy,
-    createdAt: p.createdAt,
-    updatedAt: p.updatedAt,
-    active: p.active,
     stock: p.stock,
-
-    // 👇 nuevos campos en el dominio
     type: p.type,
     imageUrl: p.imageUrl ?? "/plants/plant-placeholder.png",
   };
@@ -47,10 +39,6 @@ export class PrismaProductRepository implements ProductRepository {
         ? parseFloat(data.price) || 0
         : data.price ?? 0;
 
-    const categoryId = data.productCategoryId ?? data.categoryId ?? null;
-
-    const type = data.type ?? "general";
-
     const imageUrl =
       typeof data.imageUrl === "string" && data.imageUrl.trim() !== ""
         ? data.imageUrl
@@ -61,11 +49,8 @@ export class PrismaProductRepository implements ProductRepository {
         name: data.name,
         description: data.description ?? null,
         price,
-        categoryId,
-        createdBy: data.createdBy ?? "unknown",
-        active: data.active ?? true,
         stock: data.stock ?? 0,
-        type,
+        type: data.type ?? "indoor",
         imageUrl,
       },
     });
@@ -75,8 +60,7 @@ export class PrismaProductRepository implements ProductRepository {
 
   async findAll(): Promise<Product[]> {
     const list = await prisma.product.findMany({
-      where: { active: true },
-      orderBy: { createdAt: "desc" },
+      orderBy: { name: "asc" },
     });
     return list.map(toDomain);
   }
@@ -89,40 +73,17 @@ export class PrismaProductRepository implements ProductRepository {
   async update(id: string, data: UpdateProductDTO): Promise<Product | null> {
     const updateData: any = {};
 
-    if (data.name !== undefined) {
-      updateData.name = data.name;
-    }
-
-    if (data.description !== undefined) {
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.description !== undefined)
       updateData.description = data.description ?? null;
-    }
-
     if (data.price !== undefined) {
       updateData.price =
         typeof data.price === "string"
           ? parseFloat(data.price)
           : data.price;
     }
-
-    const categoryId = data.productCategoryId ?? data.categoryId ?? undefined;
-    if (categoryId !== undefined) {
-      updateData.categoryId = categoryId;
-    }
-
-    if (data.active !== undefined) {
-      updateData.active = data.active;
-    }
-
-    if (data.stock !== undefined) {
-      updateData.stock = data.stock;
-    }
-
-    // 👇 permitir actualizar type
-    if (data.type !== undefined) {
-      updateData.type = data.type;
-    }
-
-    // 👇 permitir actualizar imageUrl + mantener placeholder si viene vacío
+    if (data.stock !== undefined) updateData.stock = data.stock;
+    if (data.type !== undefined) updateData.type = data.type;
     if (data.imageUrl !== undefined) {
       updateData.imageUrl =
         typeof data.imageUrl === "string" &&

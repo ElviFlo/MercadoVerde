@@ -1,6 +1,5 @@
 import { ProductRepository } from "../../domain/repositories/IProductRepository";
-import { CreateProductDTO } from "../dtos/CreateProductDTO";
-import { Product } from "../../domain/entities/Product";
+import type { Product, CreateProductDTO } from "../../domain/entities/Product";
 
 export class CreateProduct {
   constructor(private readonly repo: ProductRepository) {}
@@ -12,39 +11,23 @@ export class CreateProduct {
         ? Number.parseFloat(input.price)
         : input.price;
 
-    if (Number.isNaN(numericPrice)) {
+    if (!Number.isFinite(numericPrice)) {
       throw new Error("Invalid price value");
     }
 
-    // 2) Normalizar categoría (dual: productCategoryId / categoryId)
-    const normalizedCategoryId =
-      input.productCategoryId ?? input.categoryId ?? null;
+    // 2) Normalizar imageUrl → placeholder si viene vacío o no viene
+    const normalizedImageUrl =
+      typeof input.imageUrl === "string" && input.imageUrl.trim() !== ""
+        ? input.imageUrl
+        : "/plants/plant-placeholder.png";
 
-    // 3) Normalizar imageUrl → placeholder si viene vacío o no viene
-    let normalizedImageUrl: string | null;
-    if (typeof input.imageUrl === "string") {
-      normalizedImageUrl =
-        input.imageUrl.trim() === ""
-          ? "/plants/plant-placeholder.png"
-          : input.imageUrl;
-    } else {
-      normalizedImageUrl = "/plants/plant-placeholder.png";
-    }
-
-    // 4) Armar DTO completo para el repo
+    // 3) DTO final que mandamos al repositorio
     const dto: CreateProductDTO = {
       name: input.name,
       description: input.description ?? null,
       price: numericPrice,
-
-      productCategoryId: normalizedCategoryId,
-      categoryId: normalizedCategoryId, // compatibilidad
-
-      createdBy: input.createdBy ?? "unknown",
-      active: input.active ?? true,
       stock: input.stock ?? 0,
-
-      type: input.type ?? "general",
+      type: input.type ?? "indoor",
       imageUrl: normalizedImageUrl,
     };
 

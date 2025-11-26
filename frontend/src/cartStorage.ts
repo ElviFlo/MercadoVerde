@@ -1,7 +1,5 @@
-// src/cartStorage.ts
-
 export type CartItemData = {
-  id: string;        // product id (uuid del backend)
+  id: string;
   name: string;
   type: string;
   price: number;

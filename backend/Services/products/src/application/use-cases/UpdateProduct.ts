@@ -1,71 +1,71 @@
 import { ProductRepository } from "../../domain/repositories/IProductRepository";
 import { Product } from "../../domain/entities/Product";
+import { UpdateProductDTO } from "../dtos/UpdateProductDTO";
 
-interface UpdateProductDTO {
+interface UpdateProductInput extends UpdateProductDTO {
   id: string;
-  name?: string;
-  description?: string | null;
-  // price puede venir como number o string (igual que en Create)
-  price?: number | string;
-  stock?: number;
-
-  // categoría (nuevo + legacy)
-  productCategoryId?: string | null;
-  categoryId?: string | null;
-
-  // otros flags
-  active?: boolean;
-
-  // nuevos campos
-  type?: string;
-  imageUrl?: string | null;
 }
 
 export class UpdateProduct {
   constructor(private productRepository: ProductRepository) {}
 
-  async execute(data: UpdateProductDTO): Promise<Product> {
+  async execute(data: UpdateProductInput): Promise<Product> {
     const existing = await this.productRepository.findById(data.id);
-    if (!existing) throw new Error("Producto no encontrado");
+    if (!existing) {
+      throw new Error("Producto no encontrado");
+    }
 
-    const updateData: any = {
-      // si no viene en el body, mantenemos el valor actual
-      name: data.name ?? existing.name,
-      description: data.description ?? existing.description,
+    const patch: UpdateProductDTO = {};
 
-      // price: dejamos que el repo normalice (number/string → number)
-      price: data.price ?? existing.price,
+    // name
+    if (data.name !== undefined) {
+      patch.name = data.name;
+    }
 
-      stock:
-        typeof data.stock === "number" ? data.stock : existing.stock,
+    // description
+    if (data.description !== undefined) {
+      patch.description = data.description;
+    }
 
-      // normalizamos categoría en dual productCategoryId / categoryId
-      productCategoryId:
-        data.productCategoryId ??
-        data.categoryId ??
-        existing.productCategoryId ??
-        existing.categoryId ??
-        null,
-      categoryId:
-        data.categoryId ??
-        data.productCategoryId ??
-        existing.categoryId ??
-        existing.productCategoryId ??
-        null,
+    // price (normalizando string → number)
+    if (data.price !== undefined) {
+      const numericPrice =
+        typeof data.price === "string"
+          ? Number.parseFloat(data.price)
+          : data.price;
 
-      active: data.active ?? existing.active,
+      if (Number.isNaN(numericPrice)) {
+        throw new Error("Invalid price value");
+      }
 
-      // nuevos campos
-      type: data.type ?? existing.type,
-      imageUrl:
-        data.imageUrl !== undefined ? data.imageUrl : existing.imageUrl,
-    };
+      patch.price = numericPrice;
+    }
 
-    const updated = await this.productRepository.update(
-      data.id,
-      updateData,
-    );
-    if (!updated) throw new Error("No se pudo actualizar el producto");
+    // stock
+    if (data.stock !== undefined) {
+      if (!Number.isInteger(data.stock) || data.stock < 0) {
+        throw new Error("Stock must be a non-negative integer");
+      }
+      patch.stock = data.stock;
+    }
+
+    // type
+    if (data.type !== undefined) {
+      const t = data.type.trim();
+      patch.type = t === "" ? existing.type : t;
+    }
+
+    // imageUrl (mantener placeholder si se manda vacío)
+    if (data.imageUrl !== undefined) {
+      const img = (data.imageUrl ?? "").trim();
+      patch.imageUrl =
+        img === "" ? "/plants/plant-placeholder.png" : img;
+    }
+
+    const updated = await this.productRepository.update(data.id, patch);
+    if (!updated) {
+      throw new Error("No se pudo actualizar el producto");
+    }
     return updated;
   }
 }

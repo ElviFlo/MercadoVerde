@@ -106,29 +106,9 @@ export class InMemoryOrderRepository implements IOrderRepository {
           subtotal,
         };
       })
->>>>>>> c0d14b7ae15698fe898874b8489b0b4ec505114e
-    );
-
-    const total = items.reduce((acc, it) => acc + it.subtotal, 0);
-    const totalItems = items.reduce((acc, it) => acc + it.quantity, 0);
-
-    const status: OrderStatus = "PAID";
-
-    const order = new Order(
-      `order_${randomId()}`,
-      data.cartId,
-      customer,
-      items,
-      total,
-      totalItems,
-      status,
-      new Date(),
-    );
-<<<<<<< HEAD
 
     this.orders.push(order);
     return order;
-=======
 
     const reserved: Array<{ productId: string; quantity: number }> = [];
 
@@ -167,7 +147,6 @@ export class InMemoryOrderRepository implements IOrderRepository {
       }
       throw e;
     }
->>>>>>> c0d14b7ae15698fe898874b8489b0b4ec505114e
   }
 
   async findAllByUser(userId: string): Promise<Order[]> {

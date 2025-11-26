@@ -4,11 +4,6 @@ import { ProductRepository } from "../../domain/repositories/IProductRepository"
 export class DeleteProduct {
   constructor(private productRepository: ProductRepository) {}
 
-  /**
-   * Devuelve:
-   *  - true  -> se eliminó
-   *  - false -> no existía
-   */
   async execute(id: string): Promise<boolean> {
     const existing = await this.productRepository.findById(id);
 

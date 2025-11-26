@@ -1,4 +1,3 @@
-// Services/products/src/infrastructure/swagger/product.swagger.ts
 import type { Application, Request, Response } from "express";
 import * as swaggerUi from "swagger-ui-express";
 // CommonJS require para evitar issues con default import
@@ -14,8 +13,8 @@ export function setupSwagger(app: Application) {
     name: "id",
     in: "path",
     required: true,
-    schema: { type: "string", example: "h4lqwzif6u" }, // ← string
-    description: "ID del producto (string, ej. cuid/uuid)",
+    schema: { type: "string", example: "h4lqwzif6u" },
+    description: "ID del producto (string, ej. uuid)",
   };
 
   const options: import("swagger-jsdoc").Options = {
@@ -36,28 +35,48 @@ export function setupSwagger(app: Application) {
           Product: {
             type: "object",
             properties: {
-              id: { type: "string", example: "h4lqwzif6u" }, // ← string
-              name: { type: "string", example: "Café orgánico" },
-              price: { type: "number", example: 19.99 },
-              stock: { type: "integer", example: 50 },
-              description: { type: "string", nullable: true, example: "Tueste medio, 500g" },
-              categoryId: { type: "string", nullable: true, example: "cat_abc123" },
-              createdBy: { type: "string", example: "super@admin.com" },
-              active: { type: "boolean", example: true },
-              createdAt: { type: "string", format: "date-time", example: "2025-09-29T21:20:00.000Z" },
-              updatedAt: { type: "string", format: "date-time", example: "2025-09-29T21:20:00.000Z" },
+              id: { type: "string", example: "h4lqwzif6u" },
+              name: { type: "string", example: "Monstera deliciosa (Swiss Cheese Plant)" },
+              price: { type: "number", example: 39.99 },
+              stock: { type: "integer", example: 12 },
+              description: {
+                type: "string",
+                nullable: true,
+                example: "Iconic indoor plant with large split leaves.",
+              },
+              type: {
+                type: "string",
+                example: "indoor",
+                description: "Category/type of plant: indoor, outdoor, succulent, cacti, aromatic, flowering",
+              },
+              imageUrl: {
+                type: "string",
+                example: "/plants/plant-1.png",
+              },
             },
           },
           CreateProductRequest: {
             type: "object",
-            required: ["name", "price", "stock"],
+            required: ["name", "price", "stock", "type"],
             properties: {
-              name: { type: "string", example: "Café orgánico" },
-              price: { type: "number", example: 19.99 },
-              stock: { type: "integer", example: 50 },
-              description: { type: "string", example: "Tueste medio, 500g" },
-              categoryId: { type: "string", nullable: true, example: "cat_abc123" },
-              active: { type: "boolean", example: true },
+              name: { type: "string", example: "Monstera deliciosa (Swiss Cheese Plant)" },
+              price: { type: "number", example: 39.99 },
+              stock: { type: "integer", example: 12 },
+              description: {
+                type: "string",
+                nullable: true,
+                example: "Iconic indoor plant with large split leaves.",
+              },
+              type: {
+                type: "string",
+                example: "indoor",
+                description: "indoor | outdoor | succulent | cacti | aromatic | flowering",
+              },
+              imageUrl: {
+                type: "string",
+                nullable: true,
+                example: "/plants/plant-1.png",
+              },
             },
           },
           UpdateProductRequest: {
@@ -66,9 +85,16 @@ export function setupSwagger(app: Application) {
               name: { type: "string" },
               price: { type: "number" },
               stock: { type: "integer" },
-              description: { type: "string" },
-              categoryId: { type: "string", nullable: true },
-              active: { type: "boolean" },
+              description: { type: "string", nullable: true },
+              type: {
+                type: "string",
+                example: "indoor",
+              },
+              imageUrl: {
+                type: "string",
+                nullable: true,
+                example: "/plants/plant-1.png",
+              },
             },
           },
           MessageResponse: {
@@ -78,8 +104,14 @@ export function setupSwagger(app: Application) {
         },
       },
       tags: [
-        { name: "Products - Client", description: "Lectura (requiere client o admin autenticado)" },
-        { name: "Products - Admin", description: "Mutaciones (solo admin)" },
+        {
+          name: "Products - Client",
+          description: "Lectura (requiere client o admin autenticado)",
+        },
+        {
+          name: "Products - Admin",
+          description: "Mutaciones (solo admin)",
+        },
       ],
       paths: {
         "/products": {
@@ -117,7 +149,11 @@ export function setupSwagger(app: Application) {
             responses: {
               "201": {
                 description: "Creado",
-                content: { "application/json": { schema: { $ref: "#/components/schemas/Product" } } },
+                content: {
+                  "application/json": {
+                    schema: { $ref: "#/components/schemas/Product" },
+                  },
+                },
               },
               "401": { description: "No autenticado" },
               "403": { description: "Requiere rol admin" },
@@ -132,11 +168,13 @@ export function setupSwagger(app: Application) {
             summary: "Obtener producto por id",
             description: "Requiere token válido. Acepta **client** o **admin**.",
             security: [{ bearerAuth: [] }],
-            parameters: [idParam], // ← string
+            parameters: [idParam],
             responses: {
               "200": {
                 description: "OK",
-                content: { "application/json": { schema: { $ref: "#/components/schemas/Product" } } },
+                content: {
+                  "application/json": { schema: { $ref: "#/components/schemas/Product" } },
+                },
               },
               "401": { description: "No autenticado" },
               "403": { description: "Prohibido (rol inválido)" },
@@ -147,7 +185,7 @@ export function setupSwagger(app: Application) {
             tags: ["Products - Admin"],
             summary: "Actualizar producto (admin)",
             security: [{ bearerAuth: [] }],
-            parameters: [idParam], // ← string
+            parameters: [idParam],
             requestBody: {
               required: true,
               content: {
@@ -159,7 +197,9 @@ export function setupSwagger(app: Application) {
             responses: {
               "200": {
                 description: "Actualizado",
-                content: { "application/json": { schema: { $ref: "#/components/schemas/Product" } } },
+                content: {
+                  "application/json": { schema: { $ref: "#/components/schemas/Product" } },
+                },
               },
               "401": { description: "No autenticado" },
               "403": { description: "Requiere rol admin" },
@@ -170,7 +210,7 @@ export function setupSwagger(app: Application) {
             tags: ["Products - Admin"],
             summary: "Eliminar producto (admin)",
             security: [{ bearerAuth: [] }],
-            parameters: [idParam], // ← string
+            parameters: [idParam],
             responses: {
               "204": { description: "Eliminado" },
               "401": { description: "No autenticado" },
