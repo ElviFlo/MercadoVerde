@@ -1,13 +1,9 @@
 // src/api/cart.ts
+
+import type { CartItemData } from "../cartStorage";
+
 const CART_BASE_URL =
   import.meta.env.VITE_CART_BASE_URL ?? "http://localhost:3005";
-
-type JwtPayload = {
-  id?: string | number;
-  userId?: string | number;
-  sub?: string | number;
-  email?: string;
-};
 
 function getAuthHeaders() {
   const token = localStorage.getItem("accessToken");
@@ -18,103 +14,83 @@ function getAuthHeaders() {
   return headers;
 }
 
-/**
- * Obtiene el userId desde el token, o null si no hay usuario.
- */
-function getUserIdFromToken(): string | null {
-  if (typeof window === "undefined") return null;
-
-  const token = localStorage.getItem("accessToken");
-  if (!token) return null;
-
-  try {
-    const parts = token.split(".");
-    if (parts.length < 2) return null;
-
-    const payloadBase64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const padded = payloadBase64.padEnd(
-      Math.ceil(payloadBase64.length / 4) * 4,
-      "=",
-    );
-    const json = atob(padded);
-    const payload = JSON.parse(json) as JwtPayload;
-
-    const userId =
-      payload.id ?? payload.userId ?? payload.sub ?? payload.email;
-
-    return userId != null ? String(userId) : null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Key en localStorage donde se guarda el cartId del usuario actual.
- * - Invitado: "mv_cart_id:guest"
- * - Usuario logueado: "mv_cart_id:user:<userId>"
- */
-export function getCartIdStorageKey(): string {
-  const userId = getUserIdFromToken();
-  if (!userId) return "mv_cart_id:guest";
-  return `mv_cart_id:user:${userId}`;
-}
-
-// Asegura que existe un cartId en localStorage
-export async function ensureCartId(): Promise<string> {
-  if (typeof window === "undefined") {
-    throw new Error("Cart is only available in the browser");
-  }
-
-  const storageKey = getCartIdStorageKey();
-
-  let cartId = localStorage.getItem(storageKey);
-  if (cartId) return cartId;
-
-  // ⚠️ Ajusta la ruta según tu Cart service
-  const res = await fetch(`${CART_BASE_URL}/cart`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({}),
-  });
-
-  if (!res.ok) {
-    throw new Error("Could not initialize cart");
-  }
-
-  const data = (await res.json()) as { id?: string; cartId?: string };
-  cartId = data.cartId ?? data.id;
-  if (!cartId) throw new Error("Cart backend did not return a cartId");
-
-  localStorage.setItem(storageKey, cartId);
-  return cartId;
-}
-
-// Añadir item al carrito en el backend
 export async function addItemToCartBackend(params: {
   productId: string;
   quantity: number;
 }) {
-  const cartId = await ensureCartId();
+  const token = localStorage.getItem("accessToken");
+  if (!token) return;
 
-  // ⚠️ Ajusta ruta/body al contrato real de tu micro Cart
   const res = await fetch(`${CART_BASE_URL}/cart/items`, {
     method: "POST",
     headers: getAuthHeaders(),
     body: JSON.stringify({
-      cartId,
       productId: params.productId,
       quantity: params.quantity,
     }),
   });
 
+  const text = await res.text().catch(() => "");
+
   if (!res.ok) {
-    throw new Error("Could not add item to cart");
+    let message = "Could not add item to cart";
+    try {
+      const data = JSON.parse(text);
+      if (data?.message) {
+        message = data.message; // aquí entrará "Producto inactivo"
+      }
+    } catch {
+      if (text) message = text;
+    }
+    throw new Error(message);
   }
 
-  const data = await res.json();
-  if (data.cartId && data.cartId !== cartId) {
-    const storageKey = getCartIdStorageKey();
-    localStorage.setItem(storageKey, data.cartId);
+  return text ? JSON.parse(text) : {};
+}
+
+// Vaciar carrito remoto (lo dejamos igual)
+export async function clearBackendCart() {
+  const token = localStorage.getItem("accessToken");
+  if (!token) return;
+
+  const res = await fetch(`${CART_BASE_URL}/cart`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text || "Could not clear backend cart");
   }
-  return data;
+}
+
+/**
+ * Sincroniza el carrito local con el backend:
+ * - Vacía el carrito remoto.
+ * - Intenta agregar todos los items.
+ * Si falla uno, lanza un error indicando qué producto dio problema.
+ */
+export async function syncLocalCartToBackend(items: CartItemData[]) {
+  const token = localStorage.getItem("accessToken");
+  if (!token) return;
+
+  await clearBackendCart();
+
+  for (const item of items) {
+    if (item.quantity <= 0) continue;
+
+    try {
+      await addItemToCartBackend({
+        productId: item.id,
+        quantity: item.quantity,
+      });
+    } catch (err: any) {
+      const baseMsg =
+        err instanceof Error ? err.message : "Unknown error adding item";
+      // 👇 mensaje más amigable: incluye el nombre del producto
+      throw new Error(
+        `Error adding "${item.name}" to your cart: ${baseMsg}`,
+      );
+    }
+  }
 }

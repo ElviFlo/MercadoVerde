@@ -1,5 +1,4 @@
 // src/api/orders.ts
-// (dejo solo lo importante: tipo y función de crear orden)
 
 const ORDERS_BASE_URL =
   import.meta.env.VITE_ORDERS_BASE_URL ?? "http://localhost:3002";
@@ -24,7 +23,7 @@ export type OrderItemDTO = {
 
 export type OrderDTO = {
   id: string;
-  status: string;       // 'PAID'
+  status: string; // 'PAID'
   total: number;
   totalItems: number;
   createdAt: string;
@@ -32,52 +31,57 @@ export type OrderDTO = {
   items: OrderItemDTO[];
 };
 
-// 🔁 AHORA: recibe solo cartId y manda { cartId }
-export async function createOrderFromCartId(cartId: string): Promise<OrderDTO> {
-  if (!cartId) {
-    throw new Error("cartId is required");
-  }
-
+// 👉 POST /orders  (crear orden usando el carrito del usuario autenticado)
+export async function createOrderFromCart(): Promise<OrderDTO> {
   const res = await fetch(`${ORDERS_BASE_URL}/orders`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify({ cartId }),
+    body: JSON.stringify({}), // body vacío (ajusta si tu backend espera otra cosa)
   });
 
+  const text = await res.text().catch(() => "");
+
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    let message = "Error creating order";
+    let message = "Error creando la orden";
     try {
       const data = JSON.parse(text);
-      if (data?.message) message = data.message;
+      if (data?.message) {
+        message = data.message;
+      }
     } catch {
-      // ignore
+      if (text) {
+        // si el backend devuelve texto plano, lo usamos como mensaje
+        message = text;
+      }
     }
     throw new Error(message);
   }
 
-  const data = (await res.json()) as OrderDTO;
+  // si fue bien, parseamos el JSON
+  const data = (text ? JSON.parse(text) : {}) as OrderDTO;
   return data;
 }
 
+// 👉 GET /orders/mine  (listar MIS órdenes)
 export async function getMyOrders(): Promise<OrderDTO[]> {
-  const res = await fetch(`${ORDERS_BASE_URL}/orders`, {
+  const res = await fetch(`${ORDERS_BASE_URL}/orders/mine`, {
     method: "GET",
     headers: getAuthHeaders(),
   });
 
+  const text = await res.text().catch(() => "");
+
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
     let message = "Error loading orders";
     try {
       const data = JSON.parse(text);
       if (data?.message) message = data.message;
     } catch {
-      // ignore
+      if (text) message = text;
     }
     throw new Error(message);
   }
 
-  const data = (await res.json()) as OrderDTO[];
+  const data = (text ? JSON.parse(text) : []) as OrderDTO[];
   return data;
 }

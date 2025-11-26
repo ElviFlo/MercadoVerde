@@ -12,8 +12,8 @@ import {
   type CartItemData,
 } from "./cartStorage";
 
-import { createOrderFromCartId } from "./api/orders";
-import { getCartIdStorageKey } from "./api/cart";
+import { createOrderFromCart } from "./api/orders";
+import { syncLocalCartToBackend } from "./api/cart";
 
 function getNameFromToken(): string | null {
   const token = localStorage.getItem("accessToken");
@@ -38,12 +38,6 @@ function getNameFromToken(): string | null {
   } catch {
     return null;
   }
-}
-
-function getCartIdFromStorage(): string | null {
-  if (typeof window === "undefined") return null;
-  const key = getCartIdStorageKey();
-  return localStorage.getItem(key);
 }
 
 export default function Cart() {
@@ -97,7 +91,6 @@ export default function Cart() {
         type: "error",
         message: "You need to login to complete your purchase",
       });
-
       // Redirigir a login, recordando que venimos del carrito
       navigate("/login", {
         state: { from: location.pathname || "/cart" },
@@ -105,30 +98,23 @@ export default function Cart() {
       return;
     }
 
-    const cartId = getCartIdFromStorage();
-    if (!cartId) {
-      setToast({
-        type: "error",
-        message:
-          "Cart not initialized. Make sure you are using the Cart backend and storing cartId.",
-      });
-      return;
-    }
-
     try {
       setIsPlacingOrder(true);
 
-      // Crear orden en el microservicio de Orders usando solo cartId
-      const order = await createOrderFromCartId(cartId);
+      // 1) Sincronizar carrito local con el backend de Cart
+      await syncLocalCartToBackend(items);
+
+      // 2) Crear orden en Orders usando el carrito del usuario autenticado
+      const order = await createOrderFromCart();
 
       const customerName = order.customerName ?? getNameFromToken() ?? "friend";
       const mainItem = order.items[0];
 
-      // Limpiar carrito visual del frontend
+      // 3) Limpiar carrito visual del frontend
       setItems([]);
       setCartItems([]);
 
-      // Navegar a /thanks pasando la info necesaria
+      // 4) Navegar a /thanks pasando la info necesaria
       navigate("/thanks", {
         state: {
           orderId: order.id,

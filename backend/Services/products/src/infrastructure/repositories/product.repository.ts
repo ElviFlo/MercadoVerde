@@ -21,6 +21,19 @@ function toDomain(p: any): Product {
       ? rawPrice.toNumber()
       : Number(rawPrice ?? 0);
 
+  // compatibilidad: isActive puede no existir en datos antiguos
+  const isActiveRaw =
+    typeof p.isActive === "boolean"
+      ? p.isActive
+      : typeof p.active === "boolean"
+      ? p.active
+      : undefined;
+
+  const isActive =
+    typeof isActiveRaw === "boolean"
+      ? isActiveRaw
+      : p.stock > 0; // fallback: activo si tiene stock
+
   return {
     id: p.id,
     name: p.name,
@@ -29,6 +42,7 @@ function toDomain(p: any): Product {
     stock: p.stock,
     type: p.type,
     imageUrl: p.imageUrl ?? "/plants/plant-placeholder.png",
+    isActive,
   };
 }
 
@@ -39,19 +53,30 @@ export class PrismaProductRepository implements ProductRepository {
         ? parseFloat(data.price) || 0
         : data.price ?? 0;
 
+    const stock =
+      typeof data.stock === "number" && Number.isInteger(data.stock)
+        ? data.stock
+        : 0;
+
     const imageUrl =
       typeof data.imageUrl === "string" && data.imageUrl.trim() !== ""
         ? data.imageUrl
         : "/plants/plant-placeholder.png";
+
+    // si el use-case ya calculó isActive lo respetamos;
+    // si no, lo derivamos del stock
+    const isActive =
+      typeof data.isActive === "boolean" ? data.isActive : stock > 0;
 
     const created = await prisma.product.create({
       data: {
         name: data.name,
         description: data.description ?? null,
         price,
-        stock: data.stock ?? 0,
+        stock,
         type: data.type ?? "indoor",
         imageUrl,
+        isActive,
       },
     });
 
@@ -76,20 +101,28 @@ export class PrismaProductRepository implements ProductRepository {
     if (data.name !== undefined) updateData.name = data.name;
     if (data.description !== undefined)
       updateData.description = data.description ?? null;
+
     if (data.price !== undefined) {
       updateData.price =
         typeof data.price === "string"
           ? parseFloat(data.price)
           : data.price;
     }
+
     if (data.stock !== undefined) updateData.stock = data.stock;
     if (data.type !== undefined) updateData.type = data.type;
+
     if (data.imageUrl !== undefined) {
       updateData.imageUrl =
         typeof data.imageUrl === "string" &&
         data.imageUrl.trim() === ""
           ? "/plants/plant-placeholder.png"
           : data.imageUrl;
+    }
+
+    // 👇 el use-case `UpdateProduct` añade isActive al patch
+    if ((data as any).isActive !== undefined) {
+      updateData.isActive = (data as any).isActive;
     }
 
     const updated = await prisma.product.update({

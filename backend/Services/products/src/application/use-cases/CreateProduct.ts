@@ -1,3 +1,4 @@
+// use-cases/createProduct.ts
 import { ProductRepository } from "../../domain/repositories/IProductRepository";
 import type { Product, CreateProductDTO } from "../../domain/entities/Product";
 
@@ -21,14 +22,24 @@ export class CreateProduct {
         ? input.imageUrl
         : "/plants/plant-placeholder.png";
 
-    // 3) DTO final que mandamos al repositorio
+    // 3) Normalizar stock
+    const stock =
+      typeof input.stock === "number" && Number.isInteger(input.stock)
+        ? input.stock
+        : 0;
+
+    // 4) Regla de negocio: producto activo mientras haya stock
+    const isActive = stock > 0;
+
+    // 5) DTO final que mandamos al repositorio
     const dto: CreateProductDTO = {
       name: input.name,
       description: input.description ?? null,
       price: numericPrice,
-      stock: input.stock ?? 0,
+      stock,
       type: input.type ?? "indoor",
       imageUrl: normalizedImageUrl,
+      isActive,
     };
 
     return this.repo.create(dto);

@@ -55,4 +55,11 @@ export class OrderRepository {
       orderBy: { createdAt: "desc" },
     });
   }
+
+  async findAllWithItems() {
+      return prisma.order.findMany({
+        orderBy: { createdAt: "desc" },
+        include: { items: true }, // relación con OrderItem[]
+      });
+    }
 }

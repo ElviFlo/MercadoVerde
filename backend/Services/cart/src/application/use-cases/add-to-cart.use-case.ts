@@ -29,8 +29,34 @@ export class AddToCartUseCase {
       throw new BadRequestException('quantity debe ser entero positivo');
     }
 
-    const p = await this.products.getById(productId, authHeader);
-    if (!p?.active) throw new BadRequestException('Producto inactivo');
+    const p: any = await this.products.getById(productId, authHeader);
+
+    if (!p) {
+      throw new BadRequestException('Producto no encontrado');
+    }
+
+    // stock normalizado
+    const stock =
+      typeof p.stock === 'number' && Number.isInteger(p.stock) ? p.stock : 0;
+
+    // compatibilidad: algunos servicios pueden exponer `active` y otros `isActive`
+    const explicitActive =
+      typeof p.isActive === 'boolean'
+        ? p.isActive
+        : typeof p.active === 'boolean'
+        ? p.active
+        : true; // por defecto lo consideramos activo si no viene flag
+
+    // Regla de negocio:
+    // - Debe tener stock > 0
+    // - Y no estar bloqueado manualmente (explicitActive = true)
+    if (stock <= 0) {
+      throw new BadRequestException('Producto sin stock');
+    }
+
+    if (!explicitActive) {
+      throw new BadRequestException('Producto inactivo');
+    }
 
     // devuelve el resumen actualizado o el valor que implemente el repo
     return this.repo.addItem(userId, productId, quantity, Number(p.price));

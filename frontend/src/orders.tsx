@@ -37,10 +37,7 @@ export default function Orders() {
     load();
   }, []);
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(orders.length / PAGE_SIZE),
-  );
+  const totalPages = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
 
   const goToPage = (page: number) => {
     if (page < 1 || page > totalPages) return;
@@ -48,10 +45,7 @@ export default function Orders() {
   };
 
   const startIndex = (currentPage - 1) * PAGE_SIZE;
-  const paginatedOrders = orders.slice(
-    startIndex,
-    startIndex + PAGE_SIZE,
-  );
+  const paginatedOrders = orders.slice(startIndex, startIndex + PAGE_SIZE);
 
   return (
     <main className="min-h-screen flex flex-col bg-white">
@@ -67,9 +61,7 @@ export default function Orders() {
         </button>
 
         <div className="flex items-baseline gap-3 mb-10">
-          <h1 className="text-2xl font-semibold text-slate-900">
-            Orders
-          </h1>
+          <h1 className="text-2xl font-semibold text-slate-900">Orders</h1>
           <span className="text-xs font-semibold tracking-wide text-emerald-500 uppercase">
             {orders.length} items
           </span>
@@ -87,11 +79,18 @@ export default function Orders() {
               const mainItem = order.items[0];
               const extraCount = Math.max(order.items.length - 1, 0);
 
+              // 🔹 Intentamos varias fuentes para la imagen del producto
+              const mainImageUrl =
+                (mainItem as any)?.imageUrl ??
+                (mainItem as any)?.product?.imageUrl ??
+                "/plants/plant-1.png";
+
               return (
                 <article
                   key={order.id}
                   className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden"
                 >
+                  {/* Header de la tarjeta */}
                   <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 text-xs text-slate-500">
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2">
@@ -104,27 +103,27 @@ export default function Orders() {
                       <div className="flex items-center gap-2">
                         <i className="ti ti-calendar text-slate-400" />
                         <span>
-                          {new Date(
-                            order.createdAt,
-                          ).toLocaleDateString()}
+                          {new Date(order.createdAt).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
 
+                    {/* 🔹 Chip verde arriba a la derecha: siempre muestra "Paid" */}
                     <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[11px] font-semibold uppercase">
-                      {order.status}
+                      Paid
                     </span>
                   </div>
 
+                  {/* Contenido principal de la orden */}
                   {mainItem && (
                     <>
                       <div className="px-6 py-4 flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div className="w-16 h-16 rounded-xl bg-[#F4F6F8] flex items-center justify-center">
+                          <div className="w-16 h-16 rounded-xl bg-[#F4F6F8] flex items-center justify-center overflow-hidden">
                             <img
-                              src={mainItem.imageUrl}
+                              src={mainImageUrl}
                               alt={mainItem.name}
-                              className="h-12 object-contain"
+                              className="w-full h-full object-cover"
                             />
                           </div>
                           <div>
@@ -139,9 +138,9 @@ export default function Orders() {
 
                         <p className="text-sm font-semibold text-slate-800">
                           $
-                          {(mainItem.unitPrice * mainItem.quantity).toFixed(
-                            2,
-                          )}
+                          {(
+                            Number(mainItem.unitPrice) * mainItem.quantity
+                          ).toFixed(2)}
                         </p>
                       </div>
 
@@ -156,10 +155,11 @@ export default function Orders() {
                     </>
                   )}
 
+                  {/* Footer con total */}
                   <div className="px-6 py-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                     <span>Total Payment</span>
                     <span className="font-semibold text-slate-800">
-                      ${order.total.toFixed(2)}
+                      ${Number(order.total).toFixed(2)}
                     </span>
                   </div>
                 </article>

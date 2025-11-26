@@ -20,7 +20,13 @@ export class InMemoryProductRepository implements ProductRepository {
       typeof data.price === "string"
         ? Number.parseFloat(data.price)
         : data.price;
-    const price = Number.isFinite(rawPrice) ? rawPrice : 0;
+    const price = Number.isFinite(rawPrice) ? (rawPrice as number) : 0;
+
+    // stock normalizado
+    const stock =
+      typeof data.stock === "number" && Number.isInteger(data.stock)
+        ? data.stock
+        : 0;
 
     // imageUrl con placeholder SIEMPRE string
     const imageUrl: string =
@@ -28,14 +34,19 @@ export class InMemoryProductRepository implements ProductRepository {
         ? data.imageUrl
         : "/plants/plant-placeholder.png";
 
+    // isActive: respetar valor del DTO si viene, si no derivar del stock
+    const isActive =
+      typeof data.isActive === "boolean" ? data.isActive : stock > 0;
+
     const product: Product = {
       id,
       name: data.name,
       description: data.description ?? null,
       price,
-      stock: data.stock ?? 0,
+      stock,
       type: data.type ?? "indoor",
-      imageUrl, // 👈 string
+      imageUrl,
+      isActive,
     };
 
     this.products.set(id, product);
@@ -61,8 +72,14 @@ export class InMemoryProductRepository implements ProductRepository {
         typeof data.price === "string"
           ? Number.parseFloat(data.price)
           : data.price;
-      if (Number.isFinite(raw)) price = raw;
+      if (Number.isFinite(raw)) price = raw as number;
     }
+
+    // stock
+    const newStock =
+      typeof data.stock === "number" && Number.isInteger(data.stock)
+        ? data.stock
+        : existing.stock;
 
     // imageUrl SIEMPRE string
     let imageUrl: string = existing.imageUrl;
@@ -74,6 +91,13 @@ export class InMemoryProductRepository implements ProductRepository {
       }
     }
 
+    // isActive: el use-case puede mandar (data as any).isActive
+    const patchIsActive = (data as any).isActive as boolean | undefined;
+    const isActive =
+      typeof patchIsActive === "boolean"
+        ? patchIsActive
+        : newStock > 0; // fallback si no viene
+
     const updated: Product = {
       ...existing,
       name: data.name ?? existing.name,
@@ -82,9 +106,10 @@ export class InMemoryProductRepository implements ProductRepository {
           ? data.description
           : existing.description,
       price,
-      stock: data.stock ?? existing.stock,
+      stock: newStock,
       type: data.type ?? existing.type,
-      imageUrl, // 👈 string
+      imageUrl,
+      isActive,
     };
 
     this.products.set(id, updated);

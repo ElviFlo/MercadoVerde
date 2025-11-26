@@ -25,6 +25,7 @@ export async function seedProductsIfEmpty() {
         type: "indoor",
         stock: 12,
         imageUrl: "/plants/plant-1.png",
+        isActive: true,
       },
       {
         name: "Spathiphyllum (Peace Lily)",
@@ -34,6 +35,7 @@ export async function seedProductsIfEmpty() {
         type: "indoor",
         stock: 18,
         imageUrl: "/plants/plant-2.png",
+        isActive: true,
       },
 
       // 4–6: Outdoor plants
@@ -45,6 +47,7 @@ export async function seedProductsIfEmpty() {
         type: "outdoor",
         stock: 20,
         imageUrl: "/plants/plant-3.png",
+        isActive: true,
       },
       {
         name: "Bougainvillea",
@@ -54,6 +57,7 @@ export async function seedProductsIfEmpty() {
         type: "outdoor",
         stock: 10,
         imageUrl: "/plants/plant-4.png",
+        isActive: true,
       },
 
       // 7–9: Succulents
@@ -65,6 +69,7 @@ export async function seedProductsIfEmpty() {
         type: "succulent",
         stock: 40,
         imageUrl: "/plants/plant-5.png",
+        isActive: true,
       },
       {
         name: "Aloe vera",
@@ -74,6 +79,7 @@ export async function seedProductsIfEmpty() {
         type: "succulent",
         stock: 30,
         imageUrl: "/plants/plant-6.png",
+        isActive: true,
       },
 
       // 10–11: Cacti
@@ -85,6 +91,7 @@ export async function seedProductsIfEmpty() {
         type: "cacti",
         stock: 16,
         imageUrl: "/plants/plant-7.png",
+        isActive: true,
       },
       {
         name: "Echinocactus grusonii (Golden Barrel Cactus)",
@@ -94,6 +101,7 @@ export async function seedProductsIfEmpty() {
         type: "cacti",
         stock: 22,
         imageUrl: "/plants/plant-8.png",
+        isActive: true,
       },
 
       // 12–13: Aromatic herbs
@@ -105,6 +113,7 @@ export async function seedProductsIfEmpty() {
         type: "aromatic",
         stock: 50,
         imageUrl: "/plants/plant-9.png",
+        isActive: true,
       },
       {
         name: "Ocimum basilicum (Basil)",
@@ -114,6 +123,7 @@ export async function seedProductsIfEmpty() {
         type: "aromatic",
         stock: 45,
         imageUrl: "/plants/plant-10.png",
+        isActive: true,
       },
 
       // 14–15: Flowering plants
@@ -125,6 +135,7 @@ export async function seedProductsIfEmpty() {
         type: "flowering",
         stock: 28,
         imageUrl: "/plants/plant-11.png",
+        isActive: true,
       },
       {
         name: "Dahlia",
@@ -134,6 +145,7 @@ export async function seedProductsIfEmpty() {
         type: "flowering",
         stock: 15,
         imageUrl: "/plants/plant-12.png",
+        isActive: true,
       },
     ],
   });

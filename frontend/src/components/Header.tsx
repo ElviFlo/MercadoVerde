@@ -42,6 +42,8 @@ export default function Header() {
   const isLogged = Boolean(localStorage.getItem("accessToken"));
   const userInfo = isLogged ? getUserInfoFromToken() : null;
 
+  const canSeeOrders = Boolean(isLogged && userInfo && !userInfo.isAdmin);
+
   // Cerrar cuando se hace click fuera del menú
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -67,11 +69,7 @@ export default function Header() {
     <header className="flex justify-between items-center border-b-2 border-[#D1D2D4] py-4 px-6">
       {/* Logo */}
       <Link to="/">
-        <img
-          src="/logo.png"
-          alt="Mercado Verde Logo"
-          className="w-36"
-        />
+        <img src="/logo.png" alt="Mercado Verde Logo" className="w-36" />
       </Link>
 
       {/* Sections */}
@@ -129,7 +127,7 @@ export default function Header() {
                 </>
               )}
 
-              {/* Si no está logueado podrías mostrar algo tipo "Guest", opcional */}
+              {/* Si no está logueado */}
               {!isLogged && (
                 <>
                   <div className="px-4 py-2 text-xs text-slate-500">
@@ -144,13 +142,16 @@ export default function Header() {
                 </>
               )}
 
-              <Link
-                to="/orders"
-                className="block px-4 py-2 hover:bg-[#EEE]"
-                onClick={() => setIsUserMenuOpen(false)}
-              >
-                Orders
-              </Link>
+              {/* 🔹 Solo usuarios no admin ven Orders */}
+              {canSeeOrders && (
+                <Link
+                  to="/orders"
+                  className="block px-4 py-2 hover:bg-[#EEE]"
+                  onClick={() => setIsUserMenuOpen(false)}
+                >
+                  Orders
+                </Link>
+              )}
 
               {!isLogged && (
                 <>

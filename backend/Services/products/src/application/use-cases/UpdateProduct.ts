@@ -1,3 +1,4 @@
+// use-cases/updateProduct.ts
 import { ProductRepository } from "../../domain/repositories/IProductRepository";
 import { Product } from "../../domain/entities/Product";
 import { UpdateProductDTO } from "../dtos/UpdateProductDTO";
@@ -15,7 +16,7 @@ export class UpdateProduct {
       throw new Error("Producto no encontrado");
     }
 
-    const patch: UpdateProductDTO = {};
+    const patch: UpdateProductDTO & { isActive?: boolean } = {};
 
     // name
     if (data.name !== undefined) {
@@ -41,11 +42,13 @@ export class UpdateProduct {
       patch.price = numericPrice;
     }
 
-    // stock
+    // stock (y guardamos en una variable el stock resultante)
+    let finalStock = existing.stock;
     if (data.stock !== undefined) {
       if (!Number.isInteger(data.stock) || data.stock < 0) {
         throw new Error("Stock must be a non-negative integer");
       }
+      finalStock = data.stock;
       patch.stock = data.stock;
     }
 
@@ -61,6 +64,11 @@ export class UpdateProduct {
       patch.imageUrl =
         img === "" ? "/plants/plant-placeholder.png" : img;
     }
+
+    // ⚙️ Reglas de activación:
+    // Siempre que actualicemos (o aunque no cambie el stock),
+    // consideramos activo si el stock resultante es > 0
+    patch.isActive = finalStock > 0;
 
     const updated = await this.productRepository.update(data.id, patch);
     if (!updated) {
