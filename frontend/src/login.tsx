@@ -1,15 +1,24 @@
+// src/login.tsx
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { loginApi } from "./services/auth";
+
+type LocationState = {
+  from?: string;
+};
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const from =
+    (location.state as LocationState | null)?.from ?? "/";
 
   // Autocerrar tooltip después de unos segundos
   useEffect(() => {
@@ -29,7 +38,8 @@ export default function Login() {
       if (res?.accessToken) {
         localStorage.setItem("accessToken", res.accessToken);
       }
-      navigate("/");
+      // Volver a donde estaba el usuario (por ejemplo, /cart)
+      navigate(from, { replace: true });
     } catch (err) {
       const message =
         err instanceof Error
@@ -49,7 +59,10 @@ export default function Login() {
         <div className="rounded-full size-16 bg-linear-to-b from-[#6EFA5B] to-[#0C5719] absolute -top-8 -left-8" />
 
         {/* Back to home */}
-        <Link to="/" className="flex items-center gap-2 absolute top-4 left-4 text-black opacity-80 text-3xl z-10">
+        <Link
+          to="/"
+          className="flex items-center gap-2 absolute top-4 left-4 text-black opacity-80 text-3xl z-10"
+        >
           <i className="ti ti-chevron-left" />
           <span className="text-sm">Back to home</span>
         </Link>
@@ -57,8 +70,12 @@ export default function Login() {
         {/* Login form */}
         <section className="flex flex-col justify-between items-center text-center h-full gap-4 bg-white text-black p-16 py-24 rounded-l-3xl relative">
           <div>
-            <h2 className="text-xl font-bold text-center uppercase opacity-70">Login</h2>
-            <p className="opacity-70">Welcome back! Please log in to continue</p>
+            <h2 className="text-xl font-bold text-center uppercase opacity-70">
+              Login
+            </h2>
+            <p className="opacity-70">
+              Welcome back! Please log in to continue
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">
@@ -107,9 +124,17 @@ export default function Login() {
         {/* Imagen lateral */}
         <section className="rounded-r-3xl h-full relative">
           <div className="flex justify-center items-center rounded-r-3xl bg-[#028414] shadow-lg w-[425px] h-full relative overflow-hidden">
-            <img src="/weird-pattern.jpg" alt="Pattern" className="h-full opacity-35 rounded-r-3xl absolute top-0" />
+            <img
+              src="/weird-pattern.jpg"
+              alt="Pattern"
+              className="h-full opacity-35 rounded-r-3xl absolute top-0"
+            />
             <div className="bg-white opacity-55 w-64 h-80 rounded-3xl" />
-            <img src="/login-img.png" alt="Plant" className="absolute size-80 object-contain" />
+            <img
+              src="/login-img.png"
+              alt="Plant"
+              className="absolute size-80 object-contain"
+            />
           </div>
         </section>
       </section>
@@ -119,7 +144,11 @@ export default function Login() {
         <div className="fixed bottom-4 right-4 z-50 max-w-xs bg-red-500 text-white text-sm px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
           <i className="ti ti-alert-circle text-lg" />
           <span className="flex-1">{error}</span>
-          <button type="button" onClick={() => setError(null)} className="ml-2 text-xs opacity-80 hover:opacity-100 underline">
+          <button
+            type="button"
+            onClick={() => setError(null)}
+            className="ml-2 text-xs opacity-80 hover:opacity-100 underline"
+          >
             Close
           </button>
         </div>

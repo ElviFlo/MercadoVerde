@@ -1,6 +1,6 @@
 // src/cart.tsx
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -13,6 +13,7 @@ import {
 } from "./cartStorage";
 
 import { createOrderFromCartId } from "./api/orders";
+import { getCartIdStorageKey } from "./api/cart";
 
 function getNameFromToken(): string | null {
   const token = localStorage.getItem("accessToken");
@@ -40,12 +41,14 @@ function getNameFromToken(): string | null {
 }
 
 function getCartIdFromStorage(): string | null {
-  // 👇 Ajusta la key si en tu proyecto usas otra
-  return localStorage.getItem("mv_cart_id");
+  if (typeof window === "undefined") return null;
+  const key = getCartIdStorageKey();
+  return localStorage.getItem(key);
 }
 
 export default function Cart() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [items, setItems] = useState<CartItemData[]>(() => getCartItems());
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -94,7 +97,11 @@ export default function Cart() {
         type: "error",
         message: "You need to login to complete your purchase",
       });
-      navigate("/login");
+
+      // Redirigir a login, recordando que venimos del carrito
+      navigate("/login", {
+        state: { from: location.pathname || "/cart" },
+      });
       return;
     }
 
@@ -111,7 +118,7 @@ export default function Cart() {
     try {
       setIsPlacingOrder(true);
 
-      // 👇 Crear orden en el microservicio de Orders usando solo cartId
+      // Crear orden en el microservicio de Orders usando solo cartId
       const order = await createOrderFromCartId(cartId);
 
       const customerName = order.customerName ?? getNameFromToken() ?? "friend";

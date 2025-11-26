@@ -533,10 +533,158 @@ export default function ProductPage() {
               Update the fields below to modify this product.
             </p>
 
-            {/* (el formulario ya está más arriba, lo dejamos igual) */}
+            {/* 👇 AQUÍ VA EL FORMULARIO */}
+            <form onSubmit={handleModifySubmit} className="space-y-4 text-sm">
+              {/* Name */}
+              <div className="flex flex-col gap-1">
+                <label className="font-medium text-slate-800">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={editProduct.name}
+                  onChange={(e) =>
+                    setEditProduct((prev) => ({
+                      ...prev,
+                      name: e.target.value,
+                    }))
+                  }
+                  className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  placeholder="Product name"
+                  required
+                />
+              </div>
+
+              {/* Description */}
+              <div className="flex flex-col gap-1">
+                <label className="font-medium text-slate-800">
+                  Description
+                </label>
+                <textarea
+                  value={editProduct.description}
+                  onChange={(e) =>
+                    setEditProduct((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
+                  className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 min-h-[80px]"
+                  placeholder="Short description (optional)"
+                />
+              </div>
+
+              {/* Price & Stock */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="font-medium text-slate-800">
+                    Price
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={editProduct.price}
+                    onChange={(e) =>
+                      setEditProduct((prev) => ({
+                        ...prev,
+                        price: e.target.value,
+                      }))
+                    }
+                    className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="font-medium text-slate-800">
+                    Stock
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={editProduct.stock}
+                    onChange={(e) =>
+                      setEditProduct((prev) => ({
+                        ...prev,
+                        stock: e.target.value,
+                      }))
+                    }
+                    className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    placeholder="0"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Type (ajusta las opciones a las que tengas en tu modelo) */}
+              <div className="flex flex-col gap-1">
+                <label className="font-medium text-slate-800">
+                  Type
+                </label>
+                <select
+                  value={editProduct.type}
+                  onChange={(e) =>
+                    setEditProduct((prev) => ({
+                      ...prev,
+                      type: e.target.value as Product["type"],
+                    }))
+                  }
+                  className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                >
+                  <option value="indoor">Indoor</option>
+                  <option value="outdoor">Outdoor</option>
+                  <option value="succulent">Succulent</option>
+                  <option value="cacti">Cactus</option>
+                  <option value="aromatic">Aromatic</option>
+                  <option value="flowering">Flowering</option>
+                </select>
+              </div>
+
+              {/* Image URL */}
+              <div className="flex flex-col gap-1">
+                <label className="font-medium text-slate-800">
+                  Image URL
+                </label>
+                <input
+                  type="text"
+                  value={editProduct.imageUrl}
+                  onChange={(e) =>
+                    setEditProduct((prev) => ({
+                      ...prev,
+                      imageUrl: e.target.value,
+                    }))
+                  }
+                  className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  placeholder="https://..."
+                />
+                <p className="text-[11px] text-slate-400">
+                  Leave empty to keep the current image.
+                </p>
+              </div>
+
+              {/* Botones */}
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModifyModalOpen(false)}
+                  className="px-4 py-2 text-xs font-medium text-slate-600 rounded-lg hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-xs font-medium text-white bg-[#53D15E] rounded-lg hover:bg-[#33B13E]"
+                >
+                  Save changes
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
+
 
       {/* Modal de confirmación de Delete (solo admin) */}
       {isAdmin && isDeleteModalOpen && product && (
