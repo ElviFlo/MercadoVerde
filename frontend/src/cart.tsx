@@ -56,6 +56,21 @@ export default function Cart() {
     setCartItems(items);
   }, [items]);
 
+  // Releer carrito cuando Kora lo modifique
+  useEffect(() => {
+    const reloadFromLocal = () => {
+      setItems(getCartItems());
+    };
+
+    // carga inicial por si algo lo actualizó antes
+    reloadFromLocal();
+
+    window.addEventListener("kora-cart-updated", reloadFromLocal);
+    return () => {
+      window.removeEventListener("kora-cart-updated", reloadFromLocal);
+    };
+  }, []);
+
   const handleQuantityChange = (id: string, quantity: number) => {
     setItems((prev) =>
       prev.map((item) =>

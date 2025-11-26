@@ -3,7 +3,6 @@ import Footer from "./components/Footer.tsx"
 import Hero from "./components/Hero.tsx"
 import ProductsSection from "./components/ProductsSection.tsx"
 import Testimonials from "./components/Testimonials.tsx"
-import Kora from "./components/Kora.tsx"
 
 export default function Home() {
 
@@ -14,7 +13,6 @@ export default function Home() {
       <ProductsSection />
       <Testimonials />
       <Footer />
-      <Kora />
     </main>
   )
 }

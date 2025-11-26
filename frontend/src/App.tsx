@@ -1,8 +1,11 @@
 import { Routes, Route } from "react-router-dom";
 import Home, { Cart, Catalogue, Login, Orders, Product, Signup, Thanks } from "./Home";
+import Kora from "./components/Kora";
 
 export default function App() {
   return (
+    <div>
+
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/cart" element={<Cart />} />
@@ -13,5 +16,7 @@ export default function App() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/thanks" element={<Thanks />} />
     </Routes>
+      <Kora />
+    </div>
   );
 }
